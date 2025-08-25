@@ -89,22 +89,93 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
     if (!idCardRef.current) return
 
     try {
+      // Show loading state
+      const downloadButton = document.querySelector('[data-download-button]') as HTMLButtonElement
+      if (downloadButton) {
+        downloadButton.disabled = true
+        downloadButton.innerHTML = '<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mx-auto"></div><span class="ml-2">Generating HD Image...</span>'
+      }
+
+      // Wait for all images to load
+      const images = idCardRef.current?.querySelectorAll('img')
+      if (images) {
+        await Promise.all(
+          Array.from(images).map(
+            (img) =>
+              new Promise((resolve) => {
+                if (img.complete) {
+                  resolve(null)
+                } else {
+                  img.onload = () => resolve(null)
+                  img.onerror = () => resolve(null)
+                }
+              })
+          )
+        )
+      }
+
+      // Add a small delay to ensure everything is rendered
+      await new Promise(resolve => setTimeout(resolve, 500))
+
       const canvas = await html2canvas(idCardRef.current, {
-        backgroundColor: null,
-        scale: 2,
+        backgroundColor: '#ffffff', // Set white background instead of null
+        scale: 3, // Reduced from 4 to 3 for better compatibility
         useCORS: true,
-        allowTaint: true
+        allowTaint: true,
+        logging: true, // Enable logging to debug issues
+        imageTimeout: 30000, // Increase timeout further
+        removeContainer: false, // Keep container for better rendering
+        foreignObjectRendering: false, // Disable for better compatibility
+        // Remove explicit width/height to let html2canvas handle sizing
       })
       
+      // Convert to high-quality PNG
       const link = document.createElement('a')
-      link.href = canvas.toDataURL('image/png')
-      link.download = `${profile?.student_id || 'student'}-id-card.png`
+      link.href = canvas.toDataURL('image/png', 1.0) // Maximum quality
+      link.download = `${profile?.student_id || 'student'}-id-card-hd.png`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+
+      // Verify the canvas has content
+      const ctx = canvas.getContext('2d')
+      const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height)
+      const hasContent = imageData?.data.some(pixel => pixel !== 0)
+      
+      if (!hasContent) {
+        console.warn('Canvas appears empty, trying fallback method...')
+        // Try with simpler settings
+        const fallbackCanvas = await html2canvas(idCardRef.current, {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: true
+        })
+        
+        const fallbackLink = document.createElement('a')
+        fallbackLink.href = fallbackCanvas.toDataURL('image/png', 1.0)
+        fallbackLink.download = `${profile?.student_id || 'student'}-id-card.png`
+        document.body.appendChild(fallbackLink)
+        fallbackLink.click()
+        document.body.removeChild(fallbackLink)
+      }
+
+      // Reset button state
+      if (downloadButton) {
+        downloadButton.disabled = false
+        downloadButton.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span class="ml-2">Download ID Card</span>'
+      }
     } catch (error) {
       console.error('Error downloading ID card:', error)
       alert('Failed to download ID card. Please try again.')
+      
+      // Reset button state on error
+      const downloadButton = document.querySelector('[data-download-button]') as HTMLButtonElement
+      if (downloadButton) {
+        downloadButton.disabled = false
+        downloadButton.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><span class="ml-2">Download ID Card</span>'
+      }
     }
   }
 
@@ -138,6 +209,7 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
         <div className="flex flex-col items-center space-y-4">
           {/* Download ID Card Button */}
           <button
+            data-download-button
             onClick={downloadIDCard}
             className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition-colors shadow-lg flex items-center space-x-2"
           >
