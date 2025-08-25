@@ -275,7 +275,7 @@ export default function StudentLayout() {
             }`}
           >
             <Home className={`w-6 h-6 ${activeTab === 'dashboard' ? 'text-orange-600' : 'text-gray-400'}`} />
-            <span className="text-xs mt-1">Dashboard</span>
+            <span className="text-xs mt-1">Home</span>
           </button>
 
           {/* QR Code - Center Item */}

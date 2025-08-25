@@ -246,20 +246,15 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
                              {/* QR Code - Bottom */}
                <div className="text-center">
           
-                 <div className="bg-white rounded-lg p-4 shadow-lg border-1 border-white">
+                 <div className=" rounded-lg p-4 border-1 border-white">
                     <img 
                       src={qrCodeUrl} 
                       alt="QR Code" 
-                      className="w-36 h-36 mx-auto"
+                      className="w-48 h-48 mx-auto"
                     />
                   </div>
                  
-                 {/* Student ID - Below QR Code */}
-                 <div className="text-center mt-2">
-                   <p className="text-sm text-white tracking-wider">
-                     {profile?.student_id}
-                   </p>
-                 </div>
+                
                </div>
             </div>
           </div>
