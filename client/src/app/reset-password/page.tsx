@@ -170,11 +170,33 @@ export default function ResetPasswordPage() {
       } else if (token) {
         // This is a password reset with a single token - we need to use it to update the password
         console.log('Using token for password reset')
-        // Try to use the token to update the password
-        const { error: updateError } = await supabase.auth.updateUser({
-          password: password
-        })
-        error = updateError
+        
+        try {
+          // Try to verify the recovery token first
+          console.log('Verifying recovery token...')
+          const { data, error: recoveryError } = await supabase.auth.verifyOtp({
+            token_hash: token,
+            type: 'recovery'
+          })
+          
+          if (recoveryError) {
+            console.error('Recovery error:', recoveryError)
+            error = recoveryError
+          } else if (data.session) {
+            // Now we have a session, we can update the password
+            console.log('Recovery successful, updating password')
+            const { error: updateError } = await supabase.auth.updateUser({
+              password: password
+            })
+            error = updateError
+          } else {
+            console.error('No session returned from recovery')
+            error = new Error('Failed to verify recovery token')
+          }
+        } catch (catchError) {
+          console.error('Catch error:', catchError)
+          error = catchError as Error
+        }
       } else {
         // Regular password update
         const { error: updateError } = await supabase.auth.updateUser({
