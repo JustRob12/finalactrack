@@ -41,6 +41,8 @@ export default function ResetPasswordPage() {
         if (token || access_token || refresh_token) {
           // This is a password reset link with token
           console.log('Password reset token detected')
+          // Clear any existing errors since we have a valid token
+          setError('')
           // Allow the user to proceed - the token will be handled during password update
           setUser({ id: 'temp', email: 'reset@temp.com' } as any)
           return
@@ -243,7 +245,7 @@ export default function ResetPasswordPage() {
 
         {/* Reset Password Form */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-          {error && (
+          {error && error !== 'Auth session missing!' && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
               {error}
             </div>
