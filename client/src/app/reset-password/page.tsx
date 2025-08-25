@@ -32,8 +32,13 @@ export default function ResetPasswordPage() {
         const urlParams = new URLSearchParams(window.location.search)
         const token = urlParams.get('token')
         const type = urlParams.get('type')
+        const access_token = urlParams.get('access_token')
+        const refresh_token = urlParams.get('refresh_token')
         
-        if (token && type === 'recovery') {
+        console.log('URL params:', { token, type, access_token, refresh_token })
+        
+        // Supabase password reset links can have different parameter structures
+        if ((token && type === 'recovery') || access_token || refresh_token) {
           // This is a password reset link with token
           console.log('Password reset token detected')
           // Allow the user to proceed - the token will be handled during password update
@@ -125,9 +130,35 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      // Check if this is a password reset with tokens in URL
+      const urlParams = new URLSearchParams(window.location.search)
+      const access_token = urlParams.get('access_token')
+      const refresh_token = urlParams.get('refresh_token')
+      
+      let error = null
+      
+      if (access_token && refresh_token) {
+        // This is a password reset with tokens - we need to set the session first
+        console.log('Setting session with tokens from URL')
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token,
+          refresh_token
+        })
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          setError('Invalid or expired reset link. Please request a new password reset.')
+          setLoading(false)
+          return
+        }
+      }
+      
+      // Now update the password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: password
       })
+      
+      error = updateError
 
       if (error) {
         setError(error.message)
@@ -139,6 +170,7 @@ export default function ResetPasswordPage() {
         }, 3000)
       }
     } catch (error) {
+      console.error('Password update error:', error)
       setError('An unexpected error occurred. Please try again.')
     } finally {
       setLoading(false)
