@@ -27,12 +27,39 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     // Check if user is authenticated (they should be after clicking reset link)
     const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      try {
+        // Check if there's a recovery token in the URL
+        const urlParams = new URLSearchParams(window.location.search)
+        const token = urlParams.get('token')
+        const type = urlParams.get('type')
+        
+        if (token && type === 'recovery') {
+          // This is a password reset link with token
+          console.log('Password reset token detected')
+          // Allow the user to proceed - the token will be handled during password update
+          setUser({ id: 'temp', email: 'reset@temp.com' } as any)
+          return
+        }
+        
+        // If no recovery token, check for regular session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+        }
+        
+        if (session?.user) {
+          // User is already authenticated
+          setUser(session.user)
+          return
+        }
+        
+        // No valid session or token found
         setError('Invalid or expired reset link. Please request a new password reset.')
-        return
+      } catch (error) {
+        console.error('Error checking user:', error)
+        setError('An error occurred while validating the reset link.')
       }
-      setUser(user)
     }
     checkUser()
   }, [])
