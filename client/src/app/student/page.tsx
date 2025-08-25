@@ -4,13 +4,11 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { User, LogOut, ChevronDown, Home, Calendar, QrCode, Users, Settings } from 'lucide-react'
+import { User, LogOut, ChevronDown, Home, QrCode, Settings } from 'lucide-react'
 
 // Import components
 import Dashboard from './components/dashboard'
-import AttendanceCheck from './components/attendancecheck'
 import QRCodeComponent from './components/qrcode'
-import Welcome from './components/welcome'
 import Profile from './components/profile'
 
 interface UserProfile {
@@ -250,9 +248,7 @@ export default function StudentLayout() {
       <main className="flex-1 p-6 pb-24">
         <div className="max-w-7xl mx-auto">
           {activeTab === 'dashboard' && <Dashboard />}
-          {activeTab === 'attendancecheck' && <AttendanceCheck />}
           {activeTab === 'qrcode' && <QRCodeComponent profile={profile} />}
-          {activeTab === 'welcome' && <Welcome profile={profile} />}
           {activeTab === 'profile' && <Profile profile={profile} />}
         </div>
       </main>
@@ -271,17 +267,6 @@ export default function StudentLayout() {
             <span className="text-xs mt-1">Dashboard</span>
           </button>
 
-          {/* Attendance Check */}
-          <button
-            onClick={() => setActiveTab('attendancecheck')}
-            className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
-              activeTab === 'attendancecheck' ? 'text-orange-600' : 'text-gray-500'
-            }`}
-          >
-            <Calendar className={`w-6 h-6 ${activeTab === 'attendancecheck' ? 'text-orange-600' : 'text-gray-400'}`} />
-            <span className="text-xs mt-1">Attendance</span>
-          </button>
-
           {/* QR Code - Center Item */}
           <button
             onClick={() => setActiveTab('qrcode')}
@@ -294,17 +279,6 @@ export default function StudentLayout() {
               <div className="absolute inset-0 w-14 h-14 bg-orange-600 rounded-full opacity-20 animate-ping"></div>
             </div>
             <span className="text-xs mt-1 text-gray-500">QR Code</span>
-          </button>
-
-          {/* Welcome */}
-          <button
-            onClick={() => setActiveTab('welcome')}
-            className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
-              activeTab === 'welcome' ? 'text-orange-600' : 'text-gray-500'
-            }`}
-          >
-            <Users className={`w-6 h-6 ${activeTab === 'welcome' ? 'text-orange-600' : 'text-gray-400'}`} />
-            <span className="text-xs mt-1">Welcome</span>
           </button>
 
           {/* Profile */}

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { User, LogOut, ChevronDown, Shield, Home, Calendar, QrCode, Users, Settings, Plus, MapPin, Clock, CheckCircle, XCircle, Upload, X, Play, Square, BookOpen } from 'lucide-react'
+import { User, LogOut, ChevronDown, Shield, Home, Calendar, QrCode, Users, Settings, Plus, MapPin, Clock, CheckCircle, XCircle, Upload, X, Play, Square } from 'lucide-react'
 import jsQR from 'jsqr'
 
 interface UserProfile {
@@ -67,10 +67,41 @@ export default function AdminDashboardPage() {
   const [selectedEvent, setSelectedEvent] = useState<number | null>(null)
   const [scanType, setScanType] = useState<'time_in' | 'time_out'>('time_in')
   const [isScanning, setIsScanning] = useState(false)
-  const [scannedData, setScannedData] = useState<any>(null)
+  const [scannedData, setScannedData] = useState<{
+    id: string
+    student_id: string
+    first_name: string
+    middle_initial?: string
+    last_name: string
+    email: string
+    year_level: string
+    course: string
+    avatar?: string
+    timestamp: string
+  } | null>(null)
   const [showApprovalModal, setShowApprovalModal] = useState(false)
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
-  const [duplicateStudentData, setDuplicateStudentData] = useState<any>(null)
+  const [duplicateStudentData, setDuplicateStudentData] = useState<{
+    id: string
+    student_id: string
+    first_name: string
+    middle_initial?: string
+    last_name: string
+    email: string
+    year_level: string
+    course: string
+    avatar?: string
+    timestamp: string
+    existingAttendance: {
+      id: number
+      event_id: number
+      student_id: string
+      time_in: string | null
+      time_out: string | null
+      created_at: string
+    }
+    scanType: string
+  } | null>(null)
   const [attendanceRecorded, setAttendanceRecorded] = useState(false)
   const [scannerLoading, setScannerLoading] = useState(false)
   const [scannerError, setScannerError] = useState<string | null>(null)
@@ -591,13 +622,16 @@ export default function AdminDashboardPage() {
               if (scannedData && studentId) {
                 // Normalize the data structure
                 const normalizedData = {
+                  id: scannedData.id,
                   student_id: studentId,
                   first_name: scannedData.first_name,
                   middle_initial: scannedData.middle_initial,
                   last_name: scannedData.last_name,
+                  email: scannedData.email,
                   year_level: scannedData.year_level,
+                  course: scannedData.course,
                   avatar: scannedData.avatar,
-                  course: scannedData.course
+                  timestamp: scannedData.timestamp
                 }
                 
                 // Immediately set QR detected state and stop scanning
@@ -634,7 +668,18 @@ export default function AdminDashboardPage() {
     detect()
   }
 
-  const handleScannedData = async (data: any) => {
+  const handleScannedData = async (data: {
+    id: string
+    student_id: string
+    first_name: string
+    middle_initial?: string
+    last_name: string
+    email: string
+    year_level: string
+    course: string
+    avatar?: string
+    timestamp: string
+  }) => {
     // Play notification sound
     if (audioRef.current) {
       try {
@@ -672,7 +717,10 @@ export default function AdminDashboardPage() {
 
       if (existingAttendance) {
         // Update existing attendance
-        const updateData: any = {}
+        const updateData: {
+          time_in?: string
+          time_out?: string
+        } = {}
         
         if (scanType === 'time_in' && !existingAttendance.time_in) {
           updateData.time_in = new Date().toISOString()

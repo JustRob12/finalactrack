@@ -110,32 +110,51 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
 
   return (
     <div className="py-6">
-      {qrCodeLoading ? (
+      {/* Check if user has profile picture */}
+      {!profile?.avatar ? (
+        <div className="text-center space-y-6">
+          <div className="w-32 h-32 bg-gray-200 rounded-full mx-auto flex items-center justify-center">
+            <User className="w-16 h-16 text-gray-400" />
+          </div>
+          <div className="max-w-md mx-auto">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Profile Picture Required</h2>
+            <p className="text-gray-600 mb-6">
+              You need to add a profile picture before you can generate your QR code and ID card. 
+              This helps ensure proper identification during attendance scanning.
+            </p>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <p className="text-sm text-orange-800">
+                <strong>Please:</strong> Go to your Profile tab and upload a profile picture to continue.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : qrCodeLoading ? (
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto"></div>
           <p className="text-gray-600">Generating ID Card...</p>
         </div>
       ) : qrCodeUrl ? (
-                 <div className="flex flex-col items-center space-y-4">
-           {/* Download ID Card Button */}
-           <button
-             onClick={downloadIDCard}
-             className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition-colors shadow-lg flex items-center space-x-2"
-           >
-             <Download className="w-5 h-5" />
-             <span>Download ID Card</span>
-           </button>
+        <div className="flex flex-col items-center space-y-4">
+          {/* Download ID Card Button */}
+          <button
+            onClick={downloadIDCard}
+            className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition-colors shadow-lg flex items-center space-x-2"
+          >
+            <Download className="w-5 h-5" />
+            <span>Download ID Card</span>
+          </button>
 
-           {/* Standard ID Card Size: 3.5" x 5" (350px x 500px) */}
-           <div 
-             ref={idCardRef}
-             className="w-[350px] h-[500px] rounded-xl shadow-2xl border-2 border-orange-300 overflow-hidden relative"
-             style={{
-               backgroundImage: 'url(/images/id-card-bg.png)',
-               backgroundSize: 'cover',
-               backgroundPosition: 'center'
-             }}
-           >
+          {/* Standard ID Card Size: 3.5" x 5" (350px x 500px) */}
+          <div 
+            ref={idCardRef}
+            className="w-[350px] h-[500px] rounded-xl shadow-2xl border-2 border-orange-300 overflow-hidden relative"
+            style={{
+              backgroundImage: 'url(/images/id-card-bg.png)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          >
             {/* Bokeh Background Effect */}
             <div className="absolute inset-0 opacity-20">
               <div className="absolute top-10 left-10 w-8 h-8 bg-white/30 rounded-full"></div>
@@ -182,19 +201,36 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
 
             {/* Card Content - Portrait Layout */}
             <div className="relative p- flex flex-col items-center h-full">
-              {/* Profile Picture - Top Center */}
-              <div className="w-28 h-28 rounded-full overflow-hidden bg-white shadow-lg border-4 border-white mb-4">
-                {profile?.avatar ? (
-                  <img 
-                    src={profile.avatar} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
-                    <User className="w-14 h-14 text-orange-600" />
+              {/* Profile Picture - Top Center with Sign */}
+              <div className="text-center mb-4">
+                <div className="relative inline-block">
+                  {/* Profile Picture */}
+                  <div className="w-32 h-32 rounded-full overflow-hidden bg-white shadow-lg border-4 border-white">
+                    {profile?.avatar ? (
+                      <img 
+                        src={profile.avatar} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
+                        <User className="w-16 h-16 text-orange-600" />
+                      </div>
+                    )}
                   </div>
-                )}
+                  
+                  {/* QR Code Sign */}
+                  <div className="absolute -top-2 -right-2 bg-orange-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg border-2 border-white">
+                    QR
+                  </div>
+                </div>
+                
+                {/* Profile Picture Label */}
+                <div className="mt-2">
+                  <p className="text-xs text-white font-semibold tracking-wide">
+                    PROFILE PICTURE
+                  </p>
+                </div>
               </div>
 
               
@@ -217,15 +253,23 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
 
                              {/* QR Code - Bottom */}
                <div className="text-center">
-                                   <div className="bg-white rounded-lg p-4 shadow-lg border-1 border-white">
+                 {/* QR Code Label */}
+                 <div className="mb-2">
+                   <p className="text-xs text-white font-semibold tracking-wide">
+                     SCAN QR CODE
+                   </p>
+                 </div>
+                 
+                 <div className="bg-white rounded-lg p-4 shadow-lg border-1 border-white">
                     <img 
                       src={qrCodeUrl} 
                       alt="QR Code" 
                       className="w-36 h-36 mx-auto"
                     />
                   </div>
-                 {/* Student ID - Below Name */}
-                 <div className="text-center mb-2">
+                 
+                 {/* Student ID - Below QR Code */}
+                 <div className="text-center mt-2">
                    <p className="text-sm text-white tracking-wider">
                      {profile?.student_id}
                    </p>
@@ -242,7 +286,8 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">QR Code</h2>
           <p className="text-gray-600">Unable to generate QR code. Please try again.</p>
         </div>
-      )}
+      )
+    }
     </div>
   )
 }

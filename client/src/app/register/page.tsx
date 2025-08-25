@@ -31,6 +31,15 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [courses, setCourses] = useState<Course[]>([])
+  
+  // Password validation states
+  const [passwordStrength, setPasswordStrength] = useState({
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    special: false
+  })
   const { signUp } = useAuth()
   const router = useRouter()
 
@@ -52,12 +61,35 @@ export default function RegisterPage() {
     }
   }
 
+  const validatePassword = (password: string) => {
+    const hasLength = password.length >= 8
+    const hasUppercase = /[A-Z]/.test(password)
+    const hasLowercase = /[a-z]/.test(password)
+    const hasNumber = /\d/.test(password)
+    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+    
+    setPasswordStrength({
+      length: hasLength,
+      uppercase: hasUppercase,
+      lowercase: hasLowercase,
+      number: hasNumber,
+      special: hasSpecial
+    })
+    
+    return hasLength && hasUppercase && hasLowercase && hasNumber && hasSpecial
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
       [name]: value
     }))
+    
+    // Validate password when password field changes
+    if (name === 'password') {
+      validatePassword(value)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,8 +104,56 @@ export default function RegisterPage() {
       return
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long')
+    // Enhanced password validation
+    if (!validatePassword(formData.password)) {
+      setError('Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character')
+      setLoading(false)
+      return
+    }
+
+    // Check if student ID already exists
+    try {
+      const { data: existingStudent, error: checkError } = await supabase
+        .from('user_profiles')
+        .select('student_id')
+        .eq('student_id', formData.studentId)
+        .single()
+
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "not found" error
+        console.error('Error checking student ID:', checkError)
+        setError('Error checking student ID. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      if (existingStudent) {
+        setError('Student ID already exists. Please use a different student ID or contact support if this is an error.')
+        setLoading(false)
+        return
+      }
+
+      // Check if email already exists
+      const { data: existingEmail, error: emailCheckError } = await supabase
+        .from('user_profiles')
+        .select('username')
+        .eq('username', formData.email)
+        .single()
+
+      if (emailCheckError && emailCheckError.code !== 'PGRST116') {
+        console.error('Error checking email:', emailCheckError)
+        setError('Error checking email. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      if (existingEmail) {
+        setError('Email address already exists. Please use a different email or try signing in instead.')
+        setLoading(false)
+        return
+      }
+    } catch (error) {
+      console.error('Error checking student ID:', error)
+      setError('Error checking student ID. Please try again.')
       setLoading(false)
       return
     }
@@ -153,8 +233,9 @@ export default function RegisterPage() {
         setLoading(false)
         setShowSuccessModal(true)
       }
-    } catch (error: any) {
-      setError(error.message)
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
+      setError(errorMessage)
       setLoading(false)
     }
   }
@@ -348,6 +429,35 @@ export default function RegisterPage() {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
+                
+                {/* Password Strength Indicator */}
+                {formData.password && (
+                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs font-medium text-gray-700 mb-2">Password Requirements:</p>
+                    <div className="space-y-1">
+                      <div className={`flex items-center text-xs ${passwordStrength.length ? 'text-green-600' : 'text-gray-500'}`}>
+                        {passwordStrength.length ? <CheckCircle className="w-3 h-3 mr-2" /> : <X className="w-3 h-3 mr-2" />}
+                        At least 8 characters
+                      </div>
+                      <div className={`flex items-center text-xs ${passwordStrength.uppercase ? 'text-green-600' : 'text-gray-500'}`}>
+                        {passwordStrength.uppercase ? <CheckCircle className="w-3 h-3 mr-2" /> : <X className="w-3 h-3 mr-2" />}
+                        One uppercase letter (A-Z)
+                      </div>
+                      <div className={`flex items-center text-xs ${passwordStrength.lowercase ? 'text-green-600' : 'text-gray-500'}`}>
+                        {passwordStrength.lowercase ? <CheckCircle className="w-3 h-3 mr-2" /> : <X className="w-3 h-3 mr-2" />}
+                        One lowercase letter (a-z)
+                      </div>
+                      <div className={`flex items-center text-xs ${passwordStrength.number ? 'text-green-600' : 'text-gray-500'}`}>
+                        {passwordStrength.number ? <CheckCircle className="w-3 h-3 mr-2" /> : <X className="w-3 h-3 mr-2" />}
+                        One number (0-9)
+                      </div>
+                      <div className={`flex items-center text-xs ${passwordStrength.special ? 'text-green-600' : 'text-gray-500'}`}>
+                        {passwordStrength.special ? <CheckCircle className="w-3 h-3 mr-2" /> : <X className="w-3 h-3 mr-2" />}
+                        One special character (!@#$%^&*)
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Confirm Password */}
