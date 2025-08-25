@@ -28,7 +28,7 @@ interface UserProfile {
 }
 
 export default function StudentLayout() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, refreshSession, checkAndRefreshSession } = useAuth()
   const router = useRouter()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -36,13 +36,24 @@ export default function StudentLayout() {
   const [activeTab, setActiveTab] = useState('dashboard')
 
   useEffect(() => {
-    if (!user) {
-      router.push('/login')
-      return
+    const checkSession = async () => {
+      if (!user) {
+        // Try to check and refresh session before redirecting
+        const sessionValid = await checkAndRefreshSession()
+        if (!sessionValid) {
+          console.log('No user and session check failed, redirecting to login')
+          router.push('/login')
+          return
+        }
+      }
+      
+      if (user) {
+        fetchUserProfile()
+      }
     }
 
-    fetchUserProfile()
-  }, [user, router])
+    checkSession()
+  }, [user, router, checkAndRefreshSession])
 
   const createBasicProfile = async () => {
     if (!user?.id) return
@@ -249,7 +260,7 @@ export default function StudentLayout() {
         <div className="max-w-7xl mx-auto">
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'qrcode' && <QRCodeComponent profile={profile} />}
-          {activeTab === 'profile' && <Profile profile={profile} />}
+          {activeTab === 'profile' && <Profile profile={profile} onProfileUpdate={setProfile} />}
         </div>
       </main>
 

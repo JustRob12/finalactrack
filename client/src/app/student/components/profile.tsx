@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { User, Camera, Upload, X } from 'lucide-react'
+import { User, Camera, Upload, X, Crop, RotateCcw } from 'lucide-react'
+import ReactCrop, { Crop as CropType, PixelCrop } from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
 
 interface UserProfile {
   id: string
@@ -23,14 +25,28 @@ interface UserProfile {
 
 interface ProfileProps {
   profile: UserProfile | null
+  onProfileUpdate?: (updatedProfile: UserProfile) => void
 }
 
-export default function Profile({ profile }: ProfileProps) {
+export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   const { user } = useAuth()
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+  
+  // Cropping states
+  const [crop, setCrop] = useState<CropType>({
+    unit: '%',
+    width: 100,
+    height: 100,
+    x: 0,
+    y: 0
+  })
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
+  const [showCropModal, setShowCropModal] = useState(false)
+  const [originalImage, setOriginalImage] = useState<string | null>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
 
   const handleImageUpload = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -42,25 +58,46 @@ export default function Profile({ profile }: ProfileProps) {
         return
       }
 
+      console.log('Starting Cloudinary upload for file:', file.name, 'Size:', file.size)
+
       const formData = new FormData()
       formData.append('file', file)
       formData.append('upload_preset', uploadPreset)
       formData.append('cloud_name', cloudName)
 
+      // Add timeout for mobile devices
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+
       fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
         method: 'POST',
         body: formData,
+        signal: controller.signal,
       })
-        .then((response) => response.json())
+        .then((response) => {
+          console.log('Cloudinary response status:', response.status)
+          if (!response.ok) {
+            throw new Error(`Upload failed with status: ${response.status}`)
+          }
+          return response.json()
+        })
         .then((data) => {
+          clearTimeout(timeoutId)
+          console.log('Cloudinary upload response:', data)
           if (data.secure_url) {
             resolve(data.secure_url)
           } else {
-            reject(new Error('Upload failed'))
+            reject(new Error('Upload failed: No secure URL returned'))
           }
         })
         .catch((error) => {
-          reject(error)
+          clearTimeout(timeoutId)
+          console.error('Cloudinary upload error:', error)
+          if (error.name === 'AbortError') {
+            reject(new Error('Upload timed out. Please check your internet connection and try again.'))
+          } else {
+            reject(error)
+          }
         })
     })
   }
@@ -68,6 +105,8 @@ export default function Profile({ profile }: ProfileProps) {
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
+      console.log('File selected:', file.name, 'Type:', file.type, 'Size:', file.size)
+      
       if (!file.type.startsWith('image/')) {
         alert('Please select an image file')
         return
@@ -78,11 +117,25 @@ export default function Profile({ profile }: ProfileProps) {
         return
       }
 
+      // For mobile devices, ensure the file is properly loaded
+      if (file.size === 0) {
+        alert('Selected file appears to be empty. Please try selecting the image again.')
+        return
+      }
+
       setSelectedImage(file)
       
       const reader = new FileReader()
       reader.onload = (e) => {
-        setImagePreview(e.target?.result as string)
+        const imageUrl = e.target?.result as string
+        setOriginalImage(imageUrl)
+        setImagePreview(imageUrl)
+        setShowCropModal(true)
+        console.log('Image preview loaded successfully')
+      }
+      reader.onerror = (e) => {
+        console.error('Error reading file:', e)
+        alert('Error reading the selected image. Please try again.')
       }
       reader.readAsDataURL(file)
     }
@@ -91,10 +144,21 @@ export default function Profile({ profile }: ProfileProps) {
   const handleSaveProfilePicture = async () => {
     if (!selectedImage || !user?.id) return
 
+    // Check if user is still authenticated before starting upload
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      console.error('User not authenticated before upload')
+      alert('Please sign in again to upload your profile picture.')
+      return
+    }
+
     setUploadingImage(true)
     try {
+      console.log('Starting profile picture upload for user:', user.id)
+      
       // Upload to Cloudinary
       const imageUrl = await handleImageUpload(selectedImage)
+      console.log('Image uploaded to Cloudinary:', imageUrl)
 
       // Update profile in database
       const { error } = await supabase
@@ -106,9 +170,27 @@ export default function Profile({ profile }: ProfileProps) {
         console.error('Error updating profile:', error)
         alert('Failed to update profile picture. Please try again.')
       } else {
-        console.log('Profile picture updated successfully')
-        // Refresh the page to update the profile
-        window.location.reload()
+        console.log('Profile picture updated successfully in database')
+        
+        // Verify user is still authenticated
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          console.error('User session lost after profile update')
+          alert('Authentication error. Please sign in again.')
+          return
+        }
+        
+        // Update the profile state instead of reloading the page
+        if (profile && onProfileUpdate) {
+          const updatedProfile = { ...profile, avatar: imageUrl }
+          onProfileUpdate(updatedProfile)
+          console.log('Profile state updated locally')
+        }
+        // Close the modal and reset states
+        setShowProfileModal(false)
+        resetImageStates()
+        // Show success message
+        alert('Profile picture updated successfully!')
       }
     } catch (error) {
       console.error('Error saving profile picture:', error)
@@ -121,6 +203,83 @@ export default function Profile({ profile }: ProfileProps) {
   const resetImageStates = () => {
     setSelectedImage(null)
     setImagePreview(null)
+    setCrop({
+      unit: '%',
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 0
+    })
+    setCompletedCrop(undefined)
+    setOriginalImage(null)
+  }
+
+  const getCroppedImg = (image: HTMLImageElement, crop: PixelCrop): Promise<Blob> => {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+
+    if (!ctx) {
+      throw new Error('No 2d context')
+    }
+
+    const scaleX = image.naturalWidth / image.width
+    const scaleY = image.naturalHeight / image.height
+
+    canvas.width = crop.width
+    canvas.height = crop.height
+
+    ctx.drawImage(
+      image,
+      crop.x * scaleX,
+      crop.y * scaleY,
+      crop.width * scaleX,
+      crop.height * scaleY,
+      0,
+      0,
+      crop.width,
+      crop.height
+    )
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob)
+        }
+      }, 'image/jpeg', 0.9)
+    })
+  }
+
+  const handleCropComplete = (crop: PixelCrop) => {
+    setCompletedCrop(crop)
+  }
+
+  const handleCropSave = async () => {
+    if (!imgRef.current || !completedCrop) return
+
+    try {
+      const croppedBlob = await getCroppedImg(imgRef.current, completedCrop)
+      const croppedFile = new File([croppedBlob], 'cropped-profile.jpg', { type: 'image/jpeg' })
+      
+      setSelectedImage(croppedFile)
+      setImagePreview(URL.createObjectURL(croppedBlob))
+      setShowCropModal(false)
+    } catch (error) {
+      console.error('Error cropping image:', error)
+      alert('Error cropping image. Please try again.')
+    }
+  }
+
+  const handleCropCancel = () => {
+    setShowCropModal(false)
+    setImagePreview(originalImage)
+    setCrop({
+      unit: '%',
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 0
+    })
+    setCompletedCrop(undefined)
   }
 
   return (
@@ -301,6 +460,88 @@ export default function Profile({ profile }: ProfileProps) {
                   <span>Save Picture</span>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Crop Modal */}
+      {showCropModal && originalImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[95vh] flex flex-col">
+            {/* Modal Header with Action Buttons */}
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg font-semibold text-gray-900">Crop Profile Picture</h3>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    setCrop({
+                      unit: '%',
+                      width: 100,
+                      height: 100,
+                      x: 0,
+                      y: 0
+                    })
+                    setCompletedCrop(undefined)
+                  }}
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  title="Reset crop"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={handleCropSave}
+                  disabled={!completedCrop}
+                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Apply crop"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleCropCancel}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                  title="Cancel"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
+              <div className="text-center mb-4">
+                <p className="text-sm text-gray-600 mb-4">
+                  Drag to adjust the crop area. The image will be cropped to a square for your profile picture.
+                </p>
+              </div>
+              
+              <div className="flex justify-center mb-4">
+                <div className="max-w-full overflow-hidden rounded-lg border border-gray-200">
+                  <ReactCrop
+                    crop={crop}
+                    onChange={(c) => setCrop(c)}
+                    onComplete={handleCropComplete}
+                    aspect={1}
+                    circularCrop
+                  >
+                    <img
+                      ref={imgRef}
+                      src={originalImage}
+                      alt="Crop preview"
+                      className="max-w-full h-auto"
+                      style={{ maxHeight: '50vh' }}
+                    />
+                  </ReactCrop>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <p className="text-xs text-gray-500 mb-4">
+                  Tip: Position your face in the center of the circle for the best result
+                </p>
+              </div>
             </div>
           </div>
         </div>

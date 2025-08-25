@@ -35,7 +35,7 @@ interface Event {
 }
 
 export default function AdminDashboardPage() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, checkAndRefreshSession } = useAuth()
   const router = useRouter()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -121,13 +121,24 @@ export default function AdminDashboardPage() {
   } | null>(null)
 
   useEffect(() => {
-    if (!user) {
-      router.push('/login')
-      return
+    const checkSession = async () => {
+      if (!user) {
+        // Try to check and refresh session before redirecting
+        const sessionValid = await checkAndRefreshSession()
+        if (!sessionValid) {
+          console.log('No user and session check failed, redirecting to login')
+          router.push('/login')
+          return
+        }
+      }
+      
+      if (user) {
+        fetchUserProfile()
+      }
     }
 
-    fetchUserProfile()
-  }, [user, router])
+    checkSession()
+  }, [user, router, checkAndRefreshSession])
 
   useEffect(() => {
     if (activeTab === 'event') {
@@ -536,7 +547,7 @@ export default function AdminDashboardPage() {
           setScannerError(`Failed to access camera: ${error.message}`)
         }
       } else {
-        setScannerError('Failed to access camera. Please check permissions.')
+      setScannerError('Failed to access camera. Please check permissions.')
       }
     }
   }
@@ -605,16 +616,16 @@ export default function AdminDashboardPage() {
           context.drawImage(videoRef.current, 0, 0, videoRef.current.videoWidth, videoRef.current.videoHeight, 0, 0, canvas.width, canvas.height)
 
           // Get image data with reduced resolution for better performance
-          const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
           
           // Use faster QR detection settings
-          const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: 'dontInvert',
-          })
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'dontInvert',
+      })
 
-          if (code) {
-            try {
-              const scannedData = JSON.parse(code.data)
+      if (code) {
+        try {
+          const scannedData = JSON.parse(code.data)
               
               // Check for required fields - support both student_id and id
               const studentId = scannedData.student_id || scannedData.id
@@ -645,24 +656,24 @@ export default function AdminDashboardPage() {
                 }, 500)
                 
                 return
-              } else {
-                setScannerError('Invalid QR code format - missing student ID')
-                stopScanning()
-                return
-              }
-            } catch (error) {
-              setScannerError('Invalid QR code format - not valid JSON')
-              stopScanning()
-              return
-            }
           } else {
-            // Continue scanning
-            requestAnimationFrame(detect)
+            setScannerError('Invalid QR code format - missing student ID')
+            stopScanning()
+                return
           }
+        } catch (error) {
+          setScannerError('Invalid QR code format - not valid JSON')
+          stopScanning()
+              return
+        }
+      } else {
+        // Continue scanning
+          requestAnimationFrame(detect)
+        }
         } catch (error) {
           // Continue scanning even if there's an error
           requestAnimationFrame(detect)
-        }
+      }
     }
 
     detect()
@@ -1053,7 +1064,7 @@ export default function AdminDashboardPage() {
               </div>
               
               {/* QR Scanner Component */}
-              <div className="bg-white rounded-lg shadow-lg p-6">
+              <div className="bg-white rounded-lg p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900 flex items-center">
@@ -1094,7 +1105,12 @@ export default function AdminDashboardPage() {
                     </label>
                     <div className="flex space-x-2">
                       <button
-                        onClick={() => setScanType('time_in')}
+                        onClick={() => {
+                          if (isScanning) {
+                            stopScanning()
+                          }
+                          setScanType('time_in')
+                        }}
                         className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                           scanType === 'time_in'
                             ? 'bg-orange-600 text-white'
@@ -1104,7 +1120,12 @@ export default function AdminDashboardPage() {
                         Time In
                       </button>
                       <button
-                        onClick={() => setScanType('time_out')}
+                        onClick={() => {
+                          if (isScanning) {
+                            stopScanning()
+                          }
+                          setScanType('time_out')
+                        }}
                         className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                           scanType === 'time_out'
                             ? 'bg-orange-600 text-white'
@@ -1157,11 +1178,11 @@ export default function AdminDashboardPage() {
                 )}
 
                                                                    {/* Hidden Video Element - Always present for ref */}
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
+                                           <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
                     className="hidden"
                   />
 
@@ -1169,7 +1190,7 @@ export default function AdminDashboardPage() {
                   {isScanning && (
                     <div className="max-w-2xl mx-auto">
                       {/* Simple Camera Container */}
-                      <div className="relative bg-black rounded-xl overflow-hidden shadow-lg">
+                      <div className="relative bg-black rounded-xl overflow-hidden">
                         {/* Video Element */}
                         <video
                           autoPlay
@@ -1210,8 +1231,8 @@ export default function AdminDashboardPage() {
                               </div>
                             )}
                           </div>
-                        </div>
-                        
+                         </div>
+                         
                         {/* Simple Status Bar */}
                         <div className="absolute top-4 left-4">
                           <div className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -1220,17 +1241,17 @@ export default function AdminDashboardPage() {
                               : 'bg-orange-500 text-white'
                           }`}>
                             {qrDetected ? 'QR Detected!' : 'Scanning...'}
-                          </div>
+                         </div>
                         </div>
                         
                         {/* Simple Instructions */}
                         <div className="absolute bottom-4 left-4 right-4">
                           <div className="bg-black/70 text-white px-3 py-2 rounded-lg text-sm text-center">
                             {qrDetected ? 'QR Code Found!' : 'Point camera at student QR code'}
-                          </div>
-                        </div>
-                      </div>
-                      
+                       </div>
+                     </div>
+                   </div>
+
                       {/* Simple Controls */}
                       <div className="mt-6 flex justify-center">
                         <button
@@ -1246,7 +1267,7 @@ export default function AdminDashboardPage() {
                         <div className="mt-4 text-center">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600 mx-auto"></div>
                           <p className="text-gray-600 mt-2 text-sm">Recording attendance...</p>
-                        </div>
+                       </div>
                       )}
                       
                       {scannedData && !scannerLoading && (
@@ -1254,8 +1275,8 @@ export default function AdminDashboardPage() {
                           <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                             <p className="text-green-700 text-sm">
                               ✓ QR Code detected! Check the approval modal.
-                            </p>
-                          </div>
+                           </p>
+                         </div>
                         </div>
                       )}
                     </div>
@@ -1281,8 +1302,8 @@ export default function AdminDashboardPage() {
                    </div>
                  )}
               </div>
-            </div>
-          )}
+                           </div>
+                         )}
 
                      {activeTab === 'stats' && (
              <div className="space-y-6">
@@ -1318,7 +1339,7 @@ export default function AdminDashboardPage() {
                        </option>
                      ))}
                    </select>
-                 </div>
+                       </div>
 
                  {/* Statistics Display */}
                  {selectedStatsEvent && (
@@ -1336,11 +1357,11 @@ export default function AdminDashboardPage() {
                              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                              </svg>
-                           </div>
+                   </div>
                            <h3 className="text-lg font-semibold text-green-900 mb-2">Time In</h3>
                            <p className="text-3xl font-bold text-green-600">{statsData.timeInCount}</p>
                            <p className="text-sm text-green-700 mt-1">students</p>
-                         </div>
+                </div>
 
                          {/* Time Out Count */}
                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
@@ -1348,7 +1369,7 @@ export default function AdminDashboardPage() {
                              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                              </svg>
-                           </div>
+              </div>
                            <h3 className="text-lg font-semibold text-blue-900 mb-2">Time Out</h3>
                            <p className="text-3xl font-bold text-blue-600">{statsData.timeOutCount}</p>
                            <p className="text-sm text-blue-700 mt-1">students</p>
@@ -1365,8 +1386,8 @@ export default function AdminDashboardPage() {
                          <p className="text-gray-600 text-sm">Select an event to view attendance statistics</p>
                        </div>
                      )}
-                   </div>
-                 )}
+            </div>
+          )}
 
                  {/* Instructions */}
                  {!selectedStatsEvent && (
@@ -1379,8 +1400,8 @@ export default function AdminDashboardPage() {
                    </div>
                  )}
                </div>
-             </div>
-           )}
+            </div>
+          )}
 
           {activeTab === 'profile' && (
             <div className="text-center py-12">
@@ -1392,45 +1413,45 @@ export default function AdminDashboardPage() {
         </div>
       </main>
 
-             {/* Bottom Navigation Bar */}
-       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-50">
-         <div className="flex items-center justify-around max-w-md mx-auto">
-            {/* Events */}
-            <button
-              onClick={() => setActiveTab('event')}
-              className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
-                activeTab === 'event' ? 'text-orange-600' : 'text-gray-500'
-              }`}
-            >
-              <Calendar className={`w-6 h-6 ${activeTab === 'event' ? 'text-orange-600' : 'text-gray-400'}`} />
-              <span className="text-xs mt-1">Events</span>
-            </button>
+      {/* Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-50">
+        <div className="flex items-center justify-around max-w-md mx-auto">
+           {/* Events */}
+           <button
+             onClick={() => setActiveTab('event')}
+             className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
+               activeTab === 'event' ? 'text-orange-600' : 'text-gray-500'
+             }`}
+           >
+             <Calendar className={`w-6 h-6 ${activeTab === 'event' ? 'text-orange-600' : 'text-gray-400'}`} />
+             <span className="text-xs mt-1">Events</span>
+           </button>
 
-            {/* QR Scanner - Center Item */}
-            <button
-              onClick={() => setActiveTab('qr-scanner')}
-              className="flex flex-col items-center py-2 px-3 -mt-6"
-            >
-              <div className="relative">
-                <div className="w-14 h-14 bg-orange-600 rounded-full flex items-center justify-center shadow-lg">
-                  <QrCode className="w-7 h-7 text-white" />
-                </div>
-                <div className="absolute inset-0 w-14 h-14 bg-orange-600 rounded-full opacity-20 animate-ping"></div>
-              </div>
-              <span className="text-xs mt-1 text-gray-500">QR Scanner</span>
-            </button>
+           {/* QR Scanner - Center Item */}
+           <button
+             onClick={() => setActiveTab('qr-scanner')}
+             className="flex flex-col items-center py-2 px-3 -mt-6"
+           >
+             <div className="relative">
+               <div className="w-14 h-14 bg-orange-600 rounded-full flex items-center justify-center shadow-lg">
+                 <QrCode className="w-7 h-7 text-white" />
+               </div>
+               <div className="absolute inset-0 w-14 h-14 bg-orange-600 rounded-full opacity-20 animate-ping"></div>
+             </div>
+             <span className="text-xs mt-1 text-gray-500">QR Scanner</span>
+           </button>
 
-            {/* Statistics */}
-            <button
-              onClick={() => setActiveTab('stats')}
-              className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
-                activeTab === 'stats' ? 'text-orange-600' : 'text-gray-500'
-              }`}
-            >
-              <Users className={`w-6 h-6 ${activeTab === 'stats' ? 'text-orange-600' : 'text-gray-400'}`} />
-              <span className="text-xs mt-1">Stats</span>
-            </button>
-         </div>
+           {/* Statistics */}
+           <button
+             onClick={() => setActiveTab('stats')}
+             className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
+               activeTab === 'stats' ? 'text-orange-600' : 'text-gray-500'
+             }`}
+           >
+             <Users className={`w-6 h-6 ${activeTab === 'stats' ? 'text-orange-600' : 'text-gray-400'}`} />
+             <span className="text-xs mt-1">Stats</span>
+           </button>
+                 </div>
        </nav>
 
        {/* Add Event Modal */}
@@ -1921,24 +1942,24 @@ export default function AdminDashboardPage() {
 
           {/* QR Code Approval Modal */}
           {showApprovalModal && scannedData && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-sm sm:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
                 {/* Modal Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
                   <h3 className="text-lg font-semibold text-gray-900">Confirm Attendance</h3>
                   <button
                     onClick={() => setShowApprovalModal(false)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    className="text-gray-400 hover:text-gray-600 transition-colors p-1"
                   >
-                    <XCircle className="w-6 h-6" />
+                    <XCircle className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
                 </div>
 
                 {/* Modal Body */}
-                <div className="p-6">
-                  <div className="text-center mb-6">
+                <div className="p-4 sm:p-6">
+                  <div className="text-center mb-4 sm:mb-6">
                     {/* Profile Picture */}
-                    <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-3 sm:mb-4 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
                       {scannedData.avatar ? (
                         <img
                           src={scannedData.avatar}
@@ -1946,17 +1967,17 @@ export default function AdminDashboardPage() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <User className="w-12 h-12 text-gray-400" />
+                        <User className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400" />
                       )}
                     </div>
                     
                     {/* Student Name */}
-                    <h4 className="text-xl font-semibold text-gray-900 mb-2">
+                    <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
                       {scannedData.first_name} {scannedData.middle_initial} {scannedData.last_name}
                     </h4>
                     
                     {/* Student ID */}
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-gray-600 mb-3 sm:mb-4">
                       Student ID: {scannedData.student_id}
                     </p>
 
@@ -1970,10 +1991,10 @@ export default function AdminDashboardPage() {
                 </div>
 
                 {/* Modal Footer */}
-                <div className="flex items-center justify-between p-6 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 sm:p-6 border-t border-gray-200 space-y-3 sm:space-y-0">
                   <button
                     onClick={restartScanning}
-                    className="px-4 py-2 text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors flex items-center space-x-2"
+                    className="w-full sm:w-auto px-4 py-3 sm:py-2 text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center space-x-2"
                     disabled={scannerLoading}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1982,10 +2003,10 @@ export default function AdminDashboardPage() {
                     <span>Scan Another</span>
                   </button>
                   
-                  <div className="flex space-x-3">
+                  <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                   <button
                     onClick={() => setShowApprovalModal(false)}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="w-full sm:w-auto px-4 py-3 sm:py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                     disabled={scannerLoading}
                   >
                     Cancel
@@ -1993,7 +2014,7 @@ export default function AdminDashboardPage() {
                   <button
                     onClick={handleApproveAttendance}
                     disabled={scannerLoading}
-                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                      className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
                     {scannerLoading ? (
                       <>
@@ -2015,48 +2036,48 @@ export default function AdminDashboardPage() {
 
           {/* Duplicate Student Modal */}
           {showDuplicateModal && duplicateStudentData && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-sm sm:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
                 {/* Modal Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
                   <h3 className="text-lg font-semibold text-gray-900">Student Already Scanned</h3>
                   <button
                     onClick={() => setShowDuplicateModal(false)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    className="text-gray-400 hover:text-gray-600 transition-colors p-1"
                   >
-                    <XCircle className="w-6 h-6" />
+                    <XCircle className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
                 </div>
 
                 {/* Modal Body */}
-                <div className="p-6">
-                  <div className="text-center mb-6">
+                <div className="p-4 sm:p-6">
+                  <div className="text-center mb-4 sm:mb-6">
                     {/* Warning Icon */}
-                    <div className="w-16 h-16 mx-auto mb-4 bg-yellow-100 rounded-full flex items-center justify-center">
-                      <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <svg className="w-7 h-7 sm:w-8 sm:h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                       </svg>
                     </div>
                     
                     {/* Student Name */}
-                    <h4 className="text-xl font-semibold text-gray-900 mb-2">
+                    <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
                       {duplicateStudentData.first_name} {duplicateStudentData.middle_initial} {duplicateStudentData.last_name}
                     </h4>
                     
                     {/* Student ID */}
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-gray-600 mb-3 sm:mb-4">
                       Student ID: {duplicateStudentData.student_id}
                     </p>
 
                     {/* Warning Message */}
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4">
                       <div className="flex items-center space-x-2 mb-2">
-                        <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                         </svg>
-                        <span className="text-yellow-700 font-medium">Already Recorded</span>
+                        <span className="text-yellow-700 font-medium text-sm sm:text-base">Already Recorded</span>
                       </div>
-                      <p className="text-yellow-600 text-sm">
+                      <p className="text-yellow-600 text-xs sm:text-sm">
                         This student already has <span className="font-medium">{duplicateStudentData.scanType.replace('_', ' ')}</span> recorded for this event.
                       </p>
                     </div>
@@ -2079,10 +2100,10 @@ export default function AdminDashboardPage() {
                 </div>
 
                 {/* Modal Footer */}
-                <div className="flex items-center justify-center p-6 border-t border-gray-200">
+                <div className="flex items-center justify-center p-4 sm:p-6 border-t border-gray-200">
                   <button
                     onClick={handleScanAnother}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                    className="w-full sm:w-auto px-6 py-3 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

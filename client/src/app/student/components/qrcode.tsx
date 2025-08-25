@@ -202,7 +202,7 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
             {/* Card Content - Portrait Layout */}
             <div className="relative p- flex flex-col items-center h-full">
               {/* Profile Picture - Top Center with Sign */}
-              <div className="text-center mb-4">
+              <div className="text-center ">
                 <div className="relative inline-block">
                   {/* Profile Picture */}
                   <div className="w-32 h-32 rounded-full overflow-hidden bg-white shadow-lg border-4 border-white">
@@ -219,25 +219,17 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
                     )}
                   </div>
                   
-                  {/* QR Code Sign */}
-                  <div className="absolute -top-2 -right-2 bg-orange-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg border-2 border-white">
-                    QR
-                  </div>
+               
                 </div>
                 
-                {/* Profile Picture Label */}
-                <div className="mt-2">
-                  <p className="text-xs text-white font-semibold tracking-wide">
-                    PROFILE PICTURE
-                  </p>
-                </div>
+        
               </div>
 
               
 
                              {/* Name - Below Picture */}
-               <div className="text-center mb-2">
-                 <h4 className="text-lg font-bold text-orange-600 mb-1 tracking-wide">
+               <div className="text-center">
+                 <h4 className="text-lg font-bold text-orange-600  tracking-wide">
                    {profile?.first_name?.toUpperCase()} {profile?.middle_initial?.toUpperCase()} {profile?.last_name?.toUpperCase()}
                  </h4>
                </div>
@@ -245,7 +237,7 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
       
 
                {/* Course - Below Student ID */}
-               <div className="text-center mb-2">
+               <div className="text-center">
                  <p className="text-base font-bold text-orange-600 tracking-wider">
                    {profile?.course?.short || profile?.course?.course_name?.toUpperCase() || 'BSIT' }
                  </p>
@@ -253,13 +245,7 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
 
                              {/* QR Code - Bottom */}
                <div className="text-center">
-                 {/* QR Code Label */}
-                 <div className="mb-2">
-                   <p className="text-xs text-white font-semibold tracking-wide">
-                     SCAN QR CODE
-                   </p>
-                 </div>
-                 
+          
                  <div className="bg-white rounded-lg p-4 shadow-lg border-1 border-white">
                     <img 
                       src={qrCodeUrl} 
