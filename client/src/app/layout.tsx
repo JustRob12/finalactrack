@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FinalActrack - Student Attendance System",
+  title: "Acetrack - Student Attendance System",
   description: "Professional student attendance tracking system",
 };
 
