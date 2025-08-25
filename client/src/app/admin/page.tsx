@@ -710,6 +710,14 @@ export default function AdminDashboardPage() {
     setShowApprovalModal(true)
   }
 
+  // Function to get current Philippine time in ISO string format
+  const getPhilippineTime = (): string => {
+    const now = new Date()
+    // Get Philippine time by adding 8 hours to UTC (PHT is UTC+8)
+    const philippineTime = new Date(now.getTime() + (8 * 60 * 60 * 1000))
+    return philippineTime.toISOString()
+  }
+
   const handleApproveAttendance = async () => {
     if (!scannedData || !selectedEvent) return
     
@@ -734,9 +742,9 @@ export default function AdminDashboardPage() {
         } = {}
         
         if (scanType === 'time_in' && !existingAttendance.time_in) {
-          updateData.time_in = new Date().toISOString()
+          updateData.time_in = getPhilippineTime()
         } else if (scanType === 'time_out' && !existingAttendance.time_out) {
-          updateData.time_out = new Date().toISOString()
+          updateData.time_out = getPhilippineTime()
         } else {
           // Student already has this scan type recorded - show duplicate modal
           setDuplicateStudentData({
@@ -767,8 +775,8 @@ export default function AdminDashboardPage() {
             lastname: scannedData.last_name,
             course_id: 1, // You might want to get this from the user profile
             avatar: scannedData.avatar,
-            time_in: scanType === 'time_in' ? new Date().toISOString() : null,
-            time_out: scanType === 'time_out' ? new Date().toISOString() : null,
+            time_in: scanType === 'time_in' ? getPhilippineTime() : null,
+            time_out: scanType === 'time_out' ? getPhilippineTime() : null,
             year_level: scannedData.year_level
           }])
 
@@ -1556,7 +1564,7 @@ export default function AdminDashboardPage() {
                         <Upload className="w-8 h-8 text-gray-400" />
                         <div>
                           <p className="text-sm text-gray-600">
-                            Click to upload or drag and drop
+                            Click to upload
                           </p>
                           <p className="text-xs text-gray-500">
                             PNG, JPG, GIF up to 5MB

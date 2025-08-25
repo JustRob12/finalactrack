@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { User, LogOut, ChevronDown, Home, QrCode, Settings } from 'lucide-react'
+import { User, LogOut, ChevronDown, Home, QrCode } from 'lucide-react'
 
 // Import components
 import Dashboard from './components/dashboard'
@@ -299,7 +299,7 @@ export default function StudentLayout() {
               activeTab === 'profile' ? 'text-orange-600' : 'text-gray-500'
             }`}
           >
-            <Settings className={`w-6 h-6 ${activeTab === 'profile' ? 'text-orange-600' : 'text-gray-400'}`} />
+            <User className={`w-6 h-6 ${activeTab === 'profile' ? 'text-orange-600' : 'text-gray-400'}`} />
             <span className="text-xs mt-1">Profile</span>
           </button>
         </div>

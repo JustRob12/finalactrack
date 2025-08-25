@@ -38,6 +38,14 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
     }
   }, [profile, user])
 
+  // Function to get current Philippine time in ISO string format
+  const getPhilippineTime = (): string => {
+    const now = new Date()
+    // Get Philippine time by adding 8 hours to UTC (PHT is UTC+8)
+    const philippineTime = new Date(now.getTime() + (8 * 60 * 60 * 1000))
+    return philippineTime.toISOString()
+  }
+
   const generateQRCode = async () => {
     if (!profile || !user) return
 
@@ -53,7 +61,7 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
         year_level: profile.year_level,
         course: profile.course?.course_name,
         avatar: profile.avatar,
-        timestamp: new Date().toISOString()
+        timestamp: getPhilippineTime()
       }
 
       const qrData = JSON.stringify(userData)
