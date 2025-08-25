@@ -26,15 +26,34 @@ export default function Dashboard() {
   const fetchEvents = async () => {
     setEventsLoading(true)
     try {
+      console.log('Fetching events for student dashboard...')
+      
+      // First, let's check all events to see what's available
+      const { data: allEvents, error: allEventsError } = await supabase
+        .from('events')
+        .select('*')
+        .order('start_datetime', { ascending: false })
+
+      if (allEventsError) {
+        console.error('Error fetching all events:', allEventsError)
+      } else {
+        console.log('All events in database:', allEvents)
+      }
+
+      // Temporarily fetch all events to debug
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .eq('status', 1) // Only show active events
+        // .eq('status', 1) // Temporarily commented out to see all events
         .order('start_datetime', { ascending: false })
 
       if (error) {
         console.error('Error fetching events:', error)
       } else {
+        console.log('Events found:', data)
+        if (data && data.length > 0) {
+          console.log('Event statuses:', data.map(e => ({ id: e.id, name: e.name, status: e.status })))
+        }
         setEvents(data || [])
       }
     } catch (error) {
@@ -46,10 +65,29 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-gray-900">Events</h2>
-      </div>
+        <button
+          onClick={async () => {
+            console.log('Fetching all events for debugging...')
+            const { data, error } = await supabase
+              .from('events')
+              .select('*')
+              .order('start_datetime', { ascending: false })
+            
+            if (error) {
+              console.error('Debug fetch error:', error)
+            } else {
+              console.log('All events (debug):', data)
+              alert(`Found ${data?.length || 0} events in database`)
+            }
+          }}
+          className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+        >
+          Debug Events
+        </button>
+      </div> */}
 
       {/* Events Grid */}
       {eventsLoading ? (

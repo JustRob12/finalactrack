@@ -12,6 +12,7 @@ interface AuthContextType {
   signOut: () => Promise<void>
   refreshSession: () => Promise<boolean>
   checkAndRefreshSession: () => Promise<boolean>
+  forgotPassword: (email: string) => Promise<{ error: Error | null }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -218,6 +219,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Function to send forgot password email
+  const forgotPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `https://finalacetrack.vercel.app/reset-password`,
+    })
+    return { error }
+  }
+
   const value = {
     user,
     loading,
@@ -226,6 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     refreshSession,
     checkAndRefreshSession,
+    forgotPassword,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
