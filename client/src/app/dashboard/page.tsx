@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { User, LogOut, ChevronDown } from 'lucide-react'
 
 interface UserProfile {
   id: string
@@ -14,6 +13,7 @@ interface UserProfile {
   last_name: string
   course_id: number
   year_level: string
+  role_id?: number
   avatar?: string
   course?: {
     course_name: string
@@ -22,11 +22,9 @@ interface UserProfile {
 }
 
 export default function DashboardPage() {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const router = useRouter()
-  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showDropdown, setShowDropdown] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -36,6 +34,57 @@ export default function DashboardPage() {
 
     fetchUserProfile()
   }, [user, router])
+
+  const createBasicProfile = async () => {
+    if (!user?.id) return
+
+    try {
+      const basicProfile = {
+        id: user.id,
+        student_id: user.email?.split('@')[0] || 'Unknown',
+        username: user.email || '',
+        first_name: 'User',
+        last_name: 'Name',
+        course_id: 1,
+        year_level: '1st Year',
+        role_id: 1
+      }
+
+      console.log('Creating basic profile:', basicProfile)
+
+      const { error: createError, data: createdProfile } = await supabase
+        .from('user_profiles')
+        .insert([basicProfile])
+        .select()
+
+      if (createError) {
+        console.error('Error creating basic profile:', createError)
+        // Use fallback profile
+        return {
+          id: user.id,
+          student_id: user.email?.split('@')[0] || 'Unknown',
+          first_name: 'User',
+          last_name: 'Name',
+          course_id: 1,
+          year_level: '1st Year'
+        }
+      } else {
+        console.log('Basic profile created successfully:', createdProfile)
+        return createdProfile[0]
+      }
+    } catch (error) {
+      console.error('Exception creating basic profile:', error)
+      // Use fallback profile
+      return {
+        id: user.id,
+        student_id: user.email?.split('@')[0] || 'Unknown',
+        first_name: 'User',
+        last_name: 'Name',
+        course_id: 1,
+        year_level: '1st Year'
+      }
+    }
+  }
 
   const fetchUserProfile = async () => {
     try {
@@ -52,68 +101,53 @@ export default function DashboardPage() {
 
       if (error) {
         console.error('Error fetching profile:', error)
-        // If profile doesn't exist, create a basic profile object
-        setProfile({
-          id: user?.id || '',
-          student_id: user?.email?.split('@')[0] || 'Unknown',
-          first_name: 'User',
-          last_name: 'Name',
-          course_id: 1,
-          year_level: '1st Year'
-        })
+        // Try to create a basic profile if it doesn't exist
+        const profile = await createBasicProfile()
+        if (profile.role_id === 0) {
+          console.log('Created profile is admin, redirecting to admin dashboard')
+          router.push('/admin')
+          return
+        } else {
+          console.log('Created profile is student, redirecting to student dashboard')
+          router.push('/student')
+          return
+        }
       } else if (data) {
         console.log('Profile found:', data)
-        setProfile(data)
+        
+        // Check if user has admin role (role_id = 0) and redirect to admin dashboard
+        if (data.role_id === 0) {
+          console.log('User is admin, redirecting to admin dashboard')
+          router.push('/admin')
+          return
+        } else {
+          // Redirect students to the new student dashboard
+          console.log('User is student, redirecting to student dashboard')
+          router.push('/student')
+          return
+        }
       } else {
-        console.log('No profile found, using fallback')
+        console.log('No profile found, creating one')
         // No profile found, create a basic one
-        setProfile({
-          id: user?.id || '',
-          student_id: user?.email?.split('@')[0] || 'Unknown',
-          first_name: 'User',
-          last_name: 'Name',
-          course_id: 1,
-          year_level: '1st Year'
-        })
+        const profile = await createBasicProfile()
+        if (profile.role_id === 0) {
+          console.log('Created profile is admin, redirecting to admin dashboard')
+          router.push('/admin')
+          return
+        } else {
+          console.log('Created profile is student, redirecting to student dashboard')
+          router.push('/student')
+          return
+        }
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
-      // Fallback profile
-      setProfile({
-        id: user?.id || '',
-        student_id: user?.email?.split('@')[0] || 'Unknown',
-        first_name: 'User',
-        last_name: 'Name',
-        course_id: 1,
-        year_level: '1st Year'
-      })
+      // Fallback - redirect to student dashboard
+      router.push('/student')
     } finally {
       setLoading(false)
     }
   }
-
-  const handleSignOut = async () => {
-    try {
-      await signOut()
-      router.push('/login')
-    } catch (error) {
-      console.error('Error signing out:', error)
-      router.push('/login')
-    }
-  }
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element
-      if (!target.closest('.user-dropdown')) {
-        setShowDropdown(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   if (loading) {
     return (
@@ -127,61 +161,11 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Top Bar */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <h1 className="text-xl font-semibold text-gray-900">FinalActrack</h1>
-          </div>
-
-          {/* User Dropdown */}
-          <div className="relative user-dropdown">
-            <button
-              onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-gray-600" />
-              </div>
-              <span className="text-sm font-medium text-gray-700">
-                {profile?.first_name} {profile?.last_name}
-              </span>
-              <ChevronDown className="w-4 h-4 text-gray-500" />
-            </button>
-
-            {/* Dropdown Menu */}
-            {showDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                <button
-                  onClick={() => {
-                    setShowDropdown(false)
-                    // Add profile functionality here
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                >
-                  Profile
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDropdown(false)
-                    handleSignOut()
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center"
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* Empty Content Area */}
-      <main className="flex-1">
-        {/* Completely empty - no content */}
-      </main>
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Redirecting...</p>
+      </div>
     </div>
   )
 }

@@ -93,9 +93,17 @@ export default function RegisterPage() {
         setError(error.message)
         setLoading(false)
       } else {
+        // Check if we have a valid user ID
+        if (!data?.user?.id) {
+          console.error('No user ID available after signup')
+          setError('Registration successful but profile creation failed. Please contact support.')
+          setLoading(false)
+          return
+        }
+
         // Create user profile in database with the correct user ID
         const userData = {
-          id: data?.user?.id, // Use the actual user ID from Supabase Auth
+          id: data.user.id,
           student_id: formData.studentId,
           username: formData.email,
           first_name: formData.firstName,
@@ -103,21 +111,43 @@ export default function RegisterPage() {
           last_name: formData.lastName,
           course_id: parseInt(formData.courseId),
           year_level: formData.yearLevel,
+          role_id: 1, // Automatically set role_id to 1 for new registrations (regular users)
         }
 
         console.log('Creating user profile with data:', userData)
+        console.log('User ID from auth:', data.user.id)
 
-        const { error: profileError, data: profileData } = await supabase
-          .from('user_profiles')
-          .insert([userData])
-          .select()
+        try {
+          const { error: profileError, data: profileData } = await supabase
+            .from('user_profiles')
+            .insert([userData])
+            .select()
 
-        if (profileError) {
-          console.error('Error creating profile:', profileError)
-          // Don't fail the registration if profile creation fails
-          // The user can still sign in and we'll create a basic profile
-        } else {
-          console.log('Profile created successfully:', profileData)
+          if (profileError) {
+            console.error('Error creating profile:', profileError)
+            console.error('Error details:', {
+              message: profileError.message,
+              details: profileError.details,
+              hint: profileError.hint,
+              code: profileError.code
+            })
+            
+            // Try to get more information about the error
+            if (profileError.code === '42501') {
+              console.error('Permission denied - check RLS policies')
+            } else if (profileError.code === '42P01') {
+              console.error('Table does not exist')
+            } else if (profileError.code === '42703') {
+              console.error('Column does not exist')
+            }
+            
+            // Don't fail the registration if profile creation fails
+            // The user can still sign in and we'll create a basic profile
+          } else {
+            console.log('Profile created successfully:', profileData)
+          }
+        } catch (profileError) {
+          console.error('Exception during profile creation:', profileError)
         }
 
         setLoading(false)
