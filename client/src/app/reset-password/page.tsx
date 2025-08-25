@@ -38,7 +38,7 @@ export default function ResetPasswordPage() {
         console.log('URL params:', { token, type, access_token, refresh_token })
         
         // Supabase password reset links can have different parameter structures
-        if ((token && type === 'recovery') || access_token || refresh_token) {
+        if (token || access_token || refresh_token) {
           // This is a password reset link with token
           console.log('Password reset token detected')
           // Allow the user to proceed - the token will be handled during password update
@@ -67,6 +67,19 @@ export default function ResetPasswordPage() {
       }
     }
     checkUser()
+
+    // Listen for auth state changes (in case the token gets processed)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Reset password page auth state change:', event, session?.user?.email)
+      if (event === 'PASSWORD_RECOVERY' || event === 'TOKEN_REFRESHED') {
+        if (session?.user) {
+          setUser(session.user)
+          setError('') // Clear any error
+        }
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   // Password validation function
@@ -132,6 +145,7 @@ export default function ResetPasswordPage() {
     try {
       // Check if this is a password reset with tokens in URL
       const urlParams = new URLSearchParams(window.location.search)
+      const token = urlParams.get('token')
       const access_token = urlParams.get('access_token')
       const refresh_token = urlParams.get('refresh_token')
       
@@ -151,14 +165,21 @@ export default function ResetPasswordPage() {
           setLoading(false)
           return
         }
+      } else if (token) {
+        // This is a password reset with a single token - we need to use it to update the password
+        console.log('Using token for password reset')
+        // Try to use the token to update the password
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: password
+        })
+        error = updateError
+      } else {
+        // Regular password update
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: password
+        })
+        error = updateError
       }
-      
-      // Now update the password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password
-      })
-      
-      error = updateError
 
       if (error) {
         setError(error.message)
