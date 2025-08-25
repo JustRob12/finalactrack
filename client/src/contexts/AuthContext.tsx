@@ -35,12 +35,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session) {
           setUser(session.user)
         } else {
-          // Try to refresh the session if no session exists
-          console.log('No session found, attempting to refresh...')
-          const refreshed = await refreshSession()
-          if (!refreshed) {
-            console.log('Session refresh failed, user not authenticated')
+          // Check if we're on a password reset page
+          const urlParams = new URLSearchParams(window.location.search)
+          const token = urlParams.get('token')
+          const access_token = urlParams.get('access_token')
+          const refresh_token = urlParams.get('refresh_token')
+          
+          if (token || access_token || refresh_token) {
+            // We're on a password reset page, don't try to refresh session
+            console.log('Password reset page detected, skipping session refresh')
             setUser(null)
+          } else {
+            // Try to refresh the session if no session exists
+            console.log('No session found, attempting to refresh...')
+            const refreshed = await refreshSession()
+            if (!refreshed) {
+              console.log('Session refresh failed, user not authenticated')
+              setUser(null)
+            }
           }
         }
       } catch (error) {
@@ -61,6 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (event === 'TOKEN_REFRESHED') {
         console.log('Token refreshed successfully')
+        setUser(session?.user ?? null)
+      } else if (event === 'PASSWORD_RECOVERY') {
+        console.log('Password recovery event detected')
         setUser(session?.user ?? null)
       } else if (event === 'SIGNED_OUT') {
         console.log('User signed out')
