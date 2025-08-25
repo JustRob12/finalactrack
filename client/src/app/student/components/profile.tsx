@@ -34,6 +34,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
   
   // Cropping states
   const [crop, setCrop] = useState<CropType>({
@@ -186,11 +187,11 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
           onProfileUpdate(updatedProfile)
           console.log('Profile state updated locally')
         }
-        // Close the modal and reset states
-        setShowProfileModal(false)
-        resetImageStates()
-        // Show success message
-        alert('Profile picture updated successfully!')
+                 // Close the modal and reset states
+         setShowProfileModal(false)
+         resetImageStates()
+         // Show success modal
+         setShowSuccessModal(true)
       }
     } catch (error) {
       console.error('Error saving profile picture:', error)
@@ -283,84 +284,101 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4 sm:px-0">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-gray-900">My Profile</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">My Profile</h2>
       </div>
 
-      {/* Professional Profile Card */}
-      <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl shadow-xl border border-orange-200 overflow-hidden">
+      {/* Professional Profile Card - Mobile First Design */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                <User className="w-6 h-6 text-white" />
+        <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-4 sm:px-6 py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/20 rounded-full flex items-center justify-center">
+                <User className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
               </div>
               <div>
-                <h3 className="text-white font-semibold text-lg">Student Profile</h3>
-                <p className="text-orange-100 text-sm">FinalActrack ID</p>
+                <h3 className="text-white font-bold text-lg sm:text-xl">Student Profile</h3>
+                <p className="text-orange-100 text-sm sm:text-base">Acetrack ID</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-orange-100 text-xs">Valid Until</p>
-              <p className="text-white font-semibold">2024-2025</p>
-            </div>
+            {/* <div className="text-center sm:text-right">
+              <p className="text-orange-100 text-xs sm:text-sm">Valid for</p>
+              <p className="text-white font-bold text-sm sm:text-base">2025-2026</p>
+            </div> */}
           </div>
         </div>
 
         {/* Profile Content */}
-        <div className="p-6">
-          <div className="flex items-start space-x-6">
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start space-y-6 sm:space-y-0 sm:space-x-6">
             {/* Profile Picture Section */}
-            <div className="relative">
-              <div className="w-24 h-24 rounded-xl overflow-hidden bg-white shadow-lg border-4 border-white">
-                {profile?.avatar ? (
-                  <img 
-                    src={profile.avatar} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
-                    <User className="w-12 h-12 text-orange-600" />
-                  </div>
-                )}
+            <div className="flex flex-col items-center sm:items-start">
+              <div className="relative">
+                <div className="w-32 h-32 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-gray-100 shadow-lg border-4 border-white">
+                  {profile?.avatar ? (
+                    <img 
+                      src={profile.avatar} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
+                      <User className="w-16 h-16 sm:w-14 sm:h-14 text-orange-600" />
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowProfileModal(true)}
+                  className="absolute -bottom-2 -right-2 w-10 h-10 sm:w-9 sm:h-9 bg-orange-600 rounded-full flex items-center justify-center hover:bg-orange-700 transition-colors shadow-lg"
+                >
+                  <Camera className="w-5 h-5 sm:w-4 sm:h-4 text-white" />
+                </button>
               </div>
-              <button
-                onClick={() => setShowProfileModal(true)}
-                className="absolute -bottom-2 -right-2 w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center hover:bg-orange-700 transition-colors shadow-lg"
-              >
-                <Camera className="w-4 h-4 text-white" />
-              </button>
+              
+              {/* Mobile: Profile Picture Label */}
+              <div className="mt-3 sm:hidden text-center">
+                <p className="text-xs text-gray-500">Tap camera icon to update</p>
+              </div>
             </div>
 
             {/* Profile Details */}
-            <div className="flex-1 space-y-4">
-              <div>
-                <h4 className="text-2xl font-bold text-gray-900 mb-1">
+            <div className="flex-1 space-y-4 sm:space-y-6">
+              <div className="text-center sm:text-left">
+                <h4 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
                   {profile?.first_name} {profile?.middle_initial} {profile?.last_name}
                 </h4>
-                <p className="text-orange-600 font-medium">Student</p>
+                <p className="text-orange-600 font-semibold text-sm sm:text-base">Student</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white/60 rounded-lg p-3">
-                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Student ID</label>
-                  <p className="text-gray-900 font-mono text-sm">{profile?.student_id}</p>
+              {/* Professional Info Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Student ID</label>
+                  <p className="text-gray-900 font-mono text-sm sm:text-base font-semibold">{profile?.student_id}</p>
                 </div>
-                <div className="bg-white/60 rounded-lg p-3">
-                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Email</label>
-                  <p className="text-gray-900 text-sm truncate">{user?.email}</p>
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email</label>
+                  <p className="text-gray-900 text-sm sm:text-base font-medium truncate">{user?.email}</p>
                 </div>
-                <div className="bg-white/60 rounded-lg p-3">
-                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Year Level</label>
-                  <p className="text-gray-900 font-medium">{profile?.year_level}</p>
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Year Level</label>
+                  <p className="text-gray-900 font-semibold text-sm sm:text-base">{profile?.year_level}</p>
                 </div>
-                <div className="bg-white/60 rounded-lg p-3">
-                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Course</label>
-                  <p className="text-gray-900 font-medium">{profile?.course?.course_name || 'Not specified'}</p>
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Course</label>
+                  <p className="text-gray-900 font-semibold text-sm sm:text-base">{profile?.course?.course_name || 'Not specified'}</p>
+                </div>
+              </div>
+
+              {/* Additional Professional Details */}
+              <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+                <h5 className="text-sm font-bold text-orange-800 uppercase tracking-wider mb-2">Academic Status</h5>
+                <div className="flex items-center justify-between">
+                  <span className="text-orange-700 font-medium text-sm">Active Student</span>
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 </div>
               </div>
             </div>
@@ -370,24 +388,24 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
 
       {/* Profile Picture Edit Modal */}
       {showProfileModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[95vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Edit Profile Picture</h3>
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Edit Profile Picture</h3>
               <button
                 onClick={() => {
                   setShowProfileModal(false)
                   resetImageStates()
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-6">
               {!imagePreview ? (
                 <div className="text-center">
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 hover:border-orange-400 transition-colors">
@@ -435,13 +453,13 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row items-center justify-end space-y-3 sm:space-y-0 sm:space-x-3 p-4 sm:p-6 border-t border-gray-200">
               <button
                 onClick={() => {
                   setShowProfileModal(false)
                   resetImageStates()
                 }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="w-full sm:w-auto px-4 py-3 sm:py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                 disabled={uploadingImage}
               >
                 Cancel
@@ -449,7 +467,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
               <button
                 onClick={handleSaveProfilePicture}
                 disabled={!selectedImage || uploadingImage}
-                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 {uploadingImage ? (
                   <>
@@ -543,9 +561,43 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
                 </p>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+                     </div>
+         </div>
+       )}
+
+       {/* Success Modal */}
+       {showSuccessModal && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4">
+             {/* Success Icon */}
+             <div className="flex justify-center pt-8 pb-4">
+               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                 <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                 </svg>
+               </div>
+             </div>
+
+             {/* Success Content */}
+             <div className="px-6 pb-6 text-center">
+               <h3 className="text-xl font-bold text-gray-900 mb-2">
+                 Profile Picture Updated!
+               </h3>
+               <p className="text-gray-600 mb-6">
+                 Your profile picture has been successfully updated. The new image will be displayed in your profile and QR code.
+               </p>
+
+               {/* Action Button */}
+               <button
+                 onClick={() => setShowSuccessModal(false)}
+                 className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+               >
+                 Got it!
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+     </div>
+   )
+ }
