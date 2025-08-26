@@ -126,6 +126,8 @@ export default function AdminDashboardPage() {
     timeInCount: number
     timeOutCount: number
   } | null>(null)
+  const [studentCount, setStudentCount] = useState<number | null>(null)
+  const [studentCountLoading, setStudentCountLoading] = useState(false)
 
   useEffect(() => {
     const checkSession = async () => {
@@ -153,6 +155,7 @@ export default function AdminDashboardPage() {
     }
     if (activeTab === 'stats') {
       fetchEvents()
+      fetchStudentCount()
     }
   }, [activeTab])
 
@@ -216,6 +219,28 @@ export default function AdminDashboardPage() {
       console.error('Error fetching events:', error)
     } finally {
       setEventsLoading(false)
+    }
+  }
+
+  const fetchStudentCount = async () => {
+    setStudentCountLoading(true)
+    try {
+      const { count, error } = await supabase
+        .from('user_profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role_id', 1) // Count users with role_id = 1 (students)
+
+      if (error) {
+        console.error('Error fetching student count:', error)
+        setStudentCount(null)
+      } else {
+        setStudentCount(count || 0)
+      }
+    } catch (error) {
+      console.error('Error fetching student count:', error)
+      setStudentCount(null)
+    } finally {
+      setStudentCountLoading(false)
     }
   }
 
@@ -1362,50 +1387,78 @@ export default function AdminDashboardPage() {
                        </div>
 
                  {/* Statistics Display */}
-                 {selectedStatsEvent && (
-                   <div className="space-y-4">
-                     {statsLoading ? (
-                       <div className="text-center py-8">
-                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto"></div>
-                         <p className="text-gray-600 mt-2 text-sm">Loading statistics...</p>
-                       </div>
-                     ) : statsData ? (
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                         {/* Time In Count */}
-                         <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-                           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                             <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                             </svg>
+                                      {/* Student Count Section */}
+                     <div className="mb-8">
+                       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                         <Users className="w-5 h-5 mr-2 text-orange-600" />
+                         Overall Statistics
+                       </h3>
+                       {studentCountLoading ? (
+                         <div className="text-center py-6">
+                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600 mx-auto"></div>
+                           <p className="text-gray-600 mt-2 text-sm">Loading student count...</p>
+                         </div>
+                       ) : (
+                         <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 text-center">
+                           <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                             <Users className="w-8 h-8 text-purple-600" />
+                           </div>
+                           <h3 className="text-lg font-semibold text-purple-900 mb-2">Total Students</h3>
+                           <p className="text-3xl font-bold text-purple-600">{studentCount || 0}</p>
+                           <p className="text-sm text-purple-700 mt-1">registered students</p>
+                         </div>
+                       )}
+                     </div>
+
+                     {/* Event Statistics Section */}
+                     {selectedStatsEvent && (
+                       <div className="space-y-4">
+                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                           <Calendar className="w-5 h-5 mr-2 text-orange-600" />
+                           Event Statistics
+                         </h3>
+                         {statsLoading ? (
+                           <div className="text-center py-8">
+                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto"></div>
+                             <p className="text-gray-600 mt-2 text-sm">Loading statistics...</p>
+                           </div>
+                         ) : statsData ? (
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             {/* Time In Count */}
+                             <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                 <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                 </svg>
                    </div>
-                           <h3 className="text-lg font-semibold text-green-900 mb-2">Time In</h3>
-                           <p className="text-3xl font-bold text-green-600">{statsData.timeInCount}</p>
-                           <p className="text-sm text-green-700 mt-1">students</p>
+                               <h3 className="text-lg font-semibold text-green-900 mb-2">Time In</h3>
+                               <p className="text-3xl font-bold text-green-600">{statsData.timeInCount}</p>
+                               <p className="text-sm text-green-700 mt-1">students</p>
                 </div>
 
-                         {/* Time Out Count */}
-                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-                           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                             <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                             </svg>
+                             {/* Time Out Count */}
+                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                 <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                 </svg>
               </div>
-                           <h3 className="text-lg font-semibold text-blue-900 mb-2">Time Out</h3>
-                           <p className="text-3xl font-bold text-blue-600">{statsData.timeOutCount}</p>
-                           <p className="text-sm text-blue-700 mt-1">students</p>
-                         </div>
-                       </div>
-                     ) : (
-                       <div className="text-center py-8">
-                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                           <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                           </svg>
-                         </div>
-                         <h3 className="text-lg font-medium text-gray-900 mb-2">No Data Available</h3>
-                         <p className="text-gray-600 text-sm">Select an event to view attendance statistics</p>
-                       </div>
-                     )}
+                               <h3 className="text-lg font-semibold text-blue-900 mb-2">Time Out</h3>
+                               <p className="text-3xl font-bold text-blue-600">{statsData.timeOutCount}</p>
+                               <p className="text-sm text-blue-700 mt-1">students</p>
+                             </div>
+                           </div>
+                         ) : (
+                           <div className="text-center py-8">
+                             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                               <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                               </svg>
+                             </div>
+                             <h3 className="text-lg font-medium text-gray-900 mb-2">No Data Available</h3>
+                             <p className="text-gray-600 text-sm">Select an event to view attendance statistics</p>
+                           </div>
+                         )}
             </div>
           )}
 
@@ -1413,7 +1466,7 @@ export default function AdminDashboardPage() {
                  {!selectedStatsEvent && (
                    <div className="text-center py-8">
                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                       <Users className="w-8 h-8 text-gray-400" />
+                       <Calendar className="w-8 h-8 text-gray-400" />
                      </div>
                      <h3 className="text-lg font-medium text-gray-900 mb-2">Select an Event</h3>
                      <p className="text-gray-600 text-sm">Choose an event from the dropdown above to view attendance statistics</p>
