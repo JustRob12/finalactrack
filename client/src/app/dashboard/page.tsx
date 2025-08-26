@@ -50,7 +50,7 @@ export default function DashboardPage() {
         role_id: 1
       }
 
-      console.log('Creating basic profile:', basicProfile)
+      // Creating basic profile
 
       const { error: createError, data: createdProfile } = await supabase
         .from('user_profiles')
@@ -69,7 +69,7 @@ export default function DashboardPage() {
           year_level: '1st Year'
         }
       } else {
-        console.log('Basic profile created successfully:', createdProfile)
+        // Basic profile created successfully
         return createdProfile[0]
       }
     } catch (error) {
@@ -88,7 +88,7 @@ export default function DashboardPage() {
 
   const fetchUserProfile = async () => {
     try {
-      console.log('Fetching profile for user ID:', user?.id)
+      // Fetching profile for user
       
       // First try to get the user profile with a simpler query
       const { data, error } = await supabase
@@ -97,45 +97,45 @@ export default function DashboardPage() {
         .eq('id', user?.id)
         .maybeSingle() // Use maybeSingle instead of single to avoid 406 error
 
-      console.log('Profile query result:', { data, error })
+      // Profile query completed
 
       if (error) {
         console.error('Error fetching profile:', error)
         // Try to create a basic profile if it doesn't exist
         const profile = await createBasicProfile()
         if (profile.role_id === 0) {
-          console.log('Created profile is admin, redirecting to admin dashboard')
+          // Created profile is admin, redirecting to admin dashboard
           router.push('/admin')
           return
         } else {
-          console.log('Created profile is student, redirecting to student dashboard')
+          // Created profile is student, redirecting to student dashboard
           router.push('/student')
           return
         }
       } else if (data) {
-        console.log('Profile found:', data)
+        // Profile found
         
         // Check if user has admin role (role_id = 0) and redirect to admin dashboard
         if (data.role_id === 0) {
-          console.log('User is admin, redirecting to admin dashboard')
+          // User is admin, redirecting to admin dashboard
           router.push('/admin')
           return
         } else {
           // Redirect students to the new student dashboard
-          console.log('User is student, redirecting to student dashboard')
+          // User is student, redirecting to student dashboard
           router.push('/student')
           return
         }
       } else {
-        console.log('No profile found, creating one')
+        // No profile found, creating one
         // No profile found, create a basic one
         const profile = await createBasicProfile()
         if (profile.role_id === 0) {
-          console.log('Created profile is admin, redirecting to admin dashboard')
+          // Created profile is admin, redirecting to admin dashboard
           router.push('/admin')
           return
         } else {
-          console.log('Created profile is student, redirecting to student dashboard')
+          // Created profile is student, redirecting to student dashboard
           router.push('/student')
           return
         }

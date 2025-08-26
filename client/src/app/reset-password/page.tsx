@@ -35,12 +35,12 @@ export default function ResetPasswordPage() {
         const access_token = urlParams.get('access_token')
         const refresh_token = urlParams.get('refresh_token')
         
-        console.log('URL params:', { token, type, access_token, refresh_token })
+        // URL parameters detected
         
         // Supabase password reset links can have different parameter structures
         if (token || access_token || refresh_token) {
           // This is a password reset link with token
-          console.log('Password reset token detected')
+          // Password reset token detected
           // Clear any existing errors since we have a valid token
           setError('')
           // Allow the user to proceed - the token will be handled during password update
@@ -72,7 +72,7 @@ export default function ResetPasswordPage() {
 
     // Listen for auth state changes (in case the token gets processed)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Reset password page auth state change:', event, session?.user?.email)
+      // Reset password page auth state change
       if (event === 'PASSWORD_RECOVERY' || event === 'TOKEN_REFRESHED') {
         if (session?.user) {
           setUser(session.user)
@@ -155,7 +155,7 @@ export default function ResetPasswordPage() {
       
       if (access_token && refresh_token) {
         // This is a password reset with tokens - we need to set the session first
-        console.log('Setting session with tokens from URL')
+        // Setting session with tokens from URL
         const { error: sessionError } = await supabase.auth.setSession({
           access_token,
           refresh_token
@@ -169,11 +169,11 @@ export default function ResetPasswordPage() {
         }
       } else if (token) {
         // This is a password reset with a single token - we need to use it to update the password
-        console.log('Using token for password reset')
+        // Using token for password reset
         
         try {
           // Try to verify the recovery token first
-          console.log('Verifying recovery token...')
+                      // Verifying recovery token
           const { data, error: recoveryError } = await supabase.auth.verifyOtp({
             token_hash: token,
             type: 'recovery'
@@ -184,7 +184,7 @@ export default function ResetPasswordPage() {
             error = recoveryError
           } else if (data.session) {
             // Now we have a session, we can update the password
-            console.log('Recovery successful, updating password')
+            // Recovery successful, updating password
             const { error: updateError } = await supabase.auth.updateUser({
               password: password
             })

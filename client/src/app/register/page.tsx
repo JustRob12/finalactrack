@@ -194,8 +194,8 @@ export default function RegisterPage() {
           role_id: 1, // Automatically set role_id to 1 for new registrations (regular users)
         }
 
-        console.log('Creating user profile with data:', userData)
-        console.log('User ID from auth:', data.user.id)
+        // Creating user profile
+        // User ID from auth
 
         try {
           const { error: profileError, data: profileData } = await supabase
@@ -224,7 +224,7 @@ export default function RegisterPage() {
             // Don't fail the registration if profile creation fails
             // The user can still sign in and we'll create a basic profile
           } else {
-            console.log('Profile created successfully:', profileData)
+            // Profile created successfully
           }
         } catch (profileError) {
           console.error('Exception during profile creation:', profileError)

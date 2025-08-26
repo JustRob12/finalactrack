@@ -128,7 +128,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
         console.error('Error updating profile:', error)
         alert('Failed to update profile. Please try again.')
       } else {
-        console.log('Profile updated successfully')
+        // Profile updated successfully
         
         // Update the profile state with new data including course info
         const updatedCourse = courses.find(c => c.id === editingProfile.course_id)
@@ -168,7 +168,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
         return
       }
 
-      console.log('Starting Cloudinary upload for file:', file.name, 'Size:', file.size)
+      // Starting Cloudinary upload
 
       const formData = new FormData()
       formData.append('file', file)
@@ -185,7 +185,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
         signal: controller.signal,
       })
         .then((response) => {
-          console.log('Cloudinary response status:', response.status)
+          // Cloudinary response received
           if (!response.ok) {
             throw new Error(`Upload failed with status: ${response.status}`)
           }
@@ -193,7 +193,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
         })
         .then((data) => {
           clearTimeout(timeoutId)
-          console.log('Cloudinary upload response:', data)
+          // Cloudinary upload completed
           if (data.secure_url) {
             resolve(data.secure_url)
           } else {
@@ -215,7 +215,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      console.log('File selected:', file.name, 'Type:', file.type, 'Size:', file.size)
+      // File selected for upload
       
       if (!file.type.startsWith('image/')) {
         alert('Please select an image file')
@@ -241,7 +241,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
         setOriginalImage(imageUrl)
         setImagePreview(imageUrl)
         setShowCropModal(true)
-        console.log('Image preview loaded successfully')
+        // Image preview loaded successfully
       }
       reader.onerror = (e) => {
         console.error('Error reading file:', e)
@@ -264,11 +264,11 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
 
     setUploadingImage(true)
     try {
-      console.log('Starting profile picture upload for user:', user.id)
+      // Starting profile picture upload
       
       // Upload to Cloudinary
       const imageUrl = await handleImageUpload(selectedImage)
-      console.log('Image uploaded to Cloudinary:', imageUrl)
+      // Image uploaded to Cloudinary
 
       // Update profile in database
       const { error } = await supabase
@@ -280,7 +280,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
         console.error('Error updating profile:', error)
         alert('Failed to update profile picture. Please try again.')
       } else {
-        console.log('Profile picture updated successfully in database')
+        // Profile picture updated successfully in database
         
         // Verify user is still authenticated
         const { data: { session } } = await supabase.auth.getSession()
@@ -294,7 +294,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
         if (profile && onProfileUpdate) {
           const updatedProfile = { ...profile, avatar: imageUrl }
           onProfileUpdate(updatedProfile)
-          console.log('Profile state updated locally')
+          // Profile state updated locally
         }
                  // Close the modal and reset states
          setShowProfileModal(false)

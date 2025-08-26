@@ -126,7 +126,7 @@ export default function AdminDashboardPage() {
         // Try to check and refresh session before redirecting
         const sessionValid = await checkAndRefreshSession()
         if (!sessionValid) {
-          console.log('No user and session check failed, redirecting to login')
+          // No user and session check failed, redirecting to login
       router.push('/login')
       return
         }
@@ -153,7 +153,7 @@ export default function AdminDashboardPage() {
 
   const fetchUserProfile = async () => {
     try {
-      console.log('Fetching admin profile for user ID:', user?.id)
+      // Fetching admin profile for user
       
       const { data, error } = await supabase
         .from('user_profiles')
@@ -161,7 +161,7 @@ export default function AdminDashboardPage() {
         .eq('id', user?.id)
         .maybeSingle()
 
-      console.log('Admin profile query result:', { data, error })
+      // Admin profile query completed
 
       if (error) {
         console.error('Error fetching admin profile:', error)
@@ -170,18 +170,18 @@ export default function AdminDashboardPage() {
       }
 
       if (data) {
-        console.log('Admin profile found:', data)
+        // Admin profile found
         
         // Check if user has admin role (role_id = 0)
         if (data.role_id !== 0) {
-          console.log('User is not admin, redirecting to regular dashboard')
+          // User is not admin, redirecting to regular dashboard
           router.push('/dashboard')
           return
         }
         
         setProfile(data)
       } else {
-        console.log('No admin profile found, redirecting to login')
+        // No admin profile found, redirecting to login
         router.push('/login')
       }
     } catch (error) {
@@ -215,17 +215,17 @@ export default function AdminDashboardPage() {
   const handleImageUpload = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       // Debug environment variables
-      console.log('Environment variables:', {
+      const envVars = {
         cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
         apiKey: process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY,
         uploadPreset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
-      })
+      }
       
-      // Also log all environment variables to see what's available
-      console.log('All NEXT_PUBLIC_ environment variables:', Object.keys(process.env).filter(key => key.startsWith('NEXT_PUBLIC_')))
+      // Environment variables available
 
       const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-             const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'user_profile'
+      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'user_profile'
+      
 
       if (!cloudName) {
         console.error('Cloudinary cloud name is missing. Available env vars:', process.env)
@@ -298,7 +298,7 @@ export default function AdminDashboardPage() {
         setImageUploadLoading(true)
         try {
           bannerUrl = await handleImageUpload(selectedImage)
-          console.log('Image uploaded successfully:', bannerUrl)
+          // Image uploaded successfully
         } catch (error) {
           console.error('Error uploading image:', error)
           alert('Failed to upload image. Please try again.')
@@ -324,7 +324,7 @@ export default function AdminDashboardPage() {
         console.error('Error adding event:', error)
         alert('Failed to add event. Please try again.')
       } else {
-        console.log('Event added successfully:', data)
+        // Event added successfully
         setShowAddEventModal(false)
         resetEventForm()
         // Refresh events list
@@ -350,7 +350,7 @@ export default function AdminDashboardPage() {
         setImageUploadLoading(true)
         try {
           bannerUrl = await handleImageUpload(selectedImage)
-          console.log('Image uploaded successfully:', bannerUrl)
+          // Image uploaded successfully
         } catch (error) {
           console.error('Error uploading image:', error)
           alert('Failed to upload image. Please try again.')
@@ -377,7 +377,7 @@ export default function AdminDashboardPage() {
         console.error('Error updating event:', error)
         alert('Failed to update event. Please try again.')
       } else {
-        console.log('Event updated successfully:', data)
+        // Event updated successfully
         setShowEditEventModal(false)
         setEditingEvent(null)
         resetEventForm()
@@ -404,7 +404,7 @@ export default function AdminDashboardPage() {
         console.error('Error deleting event:', error)
         alert('Failed to delete event. Please try again.')
       } else {
-        console.log('Event deleted successfully')
+        // Event deleted successfully
         // Refresh events list
         fetchEvents()
       }

@@ -26,7 +26,7 @@ export default function Dashboard() {
   const fetchEvents = async () => {
     setEventsLoading(true)
     try {
-      console.log('Fetching events for student dashboard...')
+      // Fetching events for student dashboard
       
       // First, let's check all events to see what's available
       const { data: allEvents, error: allEventsError } = await supabase
@@ -37,7 +37,7 @@ export default function Dashboard() {
       if (allEventsError) {
         console.error('Error fetching all events:', allEventsError)
       } else {
-        console.log('All events in database:', allEvents)
+        // All events in database
       }
 
       // Temporarily fetch all events to debug
@@ -50,9 +50,9 @@ export default function Dashboard() {
       if (error) {
         console.error('Error fetching events:', error)
       } else {
-        console.log('Events found:', data)
+        // Events found
         if (data && data.length > 0) {
-          console.log('Event statuses:', data.map(e => ({ id: e.id, name: e.name, status: e.status })))
+                      // Event statuses retrieved
         }
         setEvents(data || [])
       }
@@ -70,7 +70,7 @@ export default function Dashboard() {
         <h2 className="text-2xl font-semibold text-gray-900">Events</h2>
         <button
           onClick={async () => {
-            console.log('Fetching all events for debugging...')
+            // Fetching all events for debugging
             const { data, error } = await supabase
               .from('events')
               .select('*')
@@ -79,7 +79,7 @@ export default function Dashboard() {
             if (error) {
               console.error('Debug fetch error:', error)
             } else {
-              console.log('All events (debug):', data)
+              // All events (debug)
               alert(`Found ${data?.length || 0} events in database`)
             }
           }}

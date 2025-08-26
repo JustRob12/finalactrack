@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) {
           console.error('Error getting session:', error)
         }
-        console.log('Initial session:', session?.user?.email || 'No session')
+        // Initial session check
         
         if (session) {
           setUser(session.user)
@@ -43,14 +43,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           if (token || access_token || refresh_token) {
             // We're on a password reset page, don't try to refresh session
-            console.log('Password reset page detected, skipping session refresh')
+            // Password reset page detected, skipping session refresh
             setUser(null)
           } else {
             // Try to refresh the session if no session exists
-            console.log('No session found, attempting to refresh...')
+            // No session found, attempting to refresh
             const refreshed = await refreshSession()
             if (!refreshed) {
-              console.log('Session refresh failed, user not authenticated')
+              // Session refresh failed, user not authenticated
               setUser(null)
             }
           }
@@ -69,19 +69,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, session?.user?.email || 'No user')
+      // Auth state change detected
       
       if (event === 'TOKEN_REFRESHED') {
-        console.log('Token refreshed successfully')
+        // Token refreshed successfully
         setUser(session?.user ?? null)
       } else if (event === 'PASSWORD_RECOVERY') {
-        console.log('Password recovery event detected')
+        // Password recovery event detected
         setUser(session?.user ?? null)
       } else if (event === 'SIGNED_OUT') {
-        console.log('User signed out')
+        // User signed out
         setUser(null)
       } else if (event === 'SIGNED_IN') {
-        console.log('User signed in')
+        // User signed in
         setUser(session?.user ?? null)
       } else {
         setUser(session?.user ?? null)
@@ -103,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Set up new interval to refresh token every 50 minutes (tokens typically expire in 1 hour)
       const interval = setInterval(async () => {
-        console.log('Performing periodic token refresh...')
+        // Performing periodic token refresh
         await refreshSession()
       }, 50 * 60 * 1000) // 50 minutes
 
@@ -173,18 +173,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Function to refresh session
   const refreshSession = async () => {
     try {
-      console.log('Attempting to refresh session...')
+      // Attempting to refresh session
       
       // First check if we have a refresh token in storage
       const currentSession = await supabase.auth.getSession()
       if (!currentSession.data.session?.refresh_token) {
-        console.log('No refresh token available')
+        // No refresh token available
         return false
       }
 
       // Check if token needs refresh
       if (currentSession.data.session && shouldRefreshToken(currentSession.data.session)) {
-        console.log('Token is about to expire, refreshing...')
+        // Token is about to expire, refreshing
       }
 
       const { data, error } = await supabase.auth.refreshSession()
@@ -196,11 +196,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       if (data.session) {
-        console.log('Session refreshed successfully for:', data.session.user.email)
+        // Session refreshed successfully
         setUser(data.session.user)
         return true
       } else {
-        console.log('No session returned from refresh')
+        // No session returned from refresh
         setUser(null)
         return false
       }
@@ -217,15 +217,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session) {
-        console.log('No session to check')
+        // No session to check
         return false
       }
 
       if (shouldRefreshToken(session)) {
-        console.log('Token needs refresh, refreshing...')
+        // Token needs refresh, refreshing
         return await refreshSession()
       } else {
-        console.log('Token is still valid')
+        // Token is still valid
         return true
       }
     } catch (error) {
