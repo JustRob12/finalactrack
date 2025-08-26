@@ -225,7 +225,7 @@ export default function AdminDashboardPage() {
 
       const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
       const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'user_profile'
-      
+
 
       if (!cloudName) {
         console.error('Cloudinary cloud name is missing. Available env vars:', process.env)
@@ -1847,7 +1847,7 @@ export default function AdminDashboardPage() {
                          <Upload className="w-8 h-8 text-gray-400" />
                          <div>
                            <p className="text-sm text-gray-600">
-                             Click to upload or drag and drop
+                             Click to upload
                            </p>
                            <p className="text-xs text-gray-500">
                              PNG, JPG, GIF up to 5MB

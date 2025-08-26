@@ -58,10 +58,10 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   // Cropping states
   const [crop, setCrop] = useState<CropType>({
     unit: '%',
-    width: 100,
-    height: 100,
-    x: 0,
-    y: 0
+    width: 80,
+    height: 80,
+    x: 10,
+    y: 10
   })
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
   const [showCropModal, setShowCropModal] = useState(false)
@@ -362,10 +362,10 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
     setImagePreview(null)
     setCrop({
       unit: '%',
-      width: 100,
-      height: 100,
-      x: 0,
-      y: 0
+      width: 80,
+      height: 80,
+      x: 10,
+      y: 10
     })
     setCompletedCrop(undefined)
     setOriginalImage(null)
@@ -431,10 +431,10 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
     setImagePreview(originalImage)
     setCrop({
       unit: '%',
-      width: 100,
-      height: 100,
-      x: 0,
-      y: 0
+      width: 80,
+      height: 80,
+      x: 10,
+      y: 10
     })
     setCompletedCrop(undefined)
   }
@@ -669,7 +669,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
                       <Upload className="w-12 h-12 text-gray-400" />
                       <div>
                         <p className="text-lg text-gray-600">
-                          Click to upload or drag and drop
+                          Click to upload
                         </p>
                         <p className="text-sm text-gray-500">
                           PNG, JPG, GIF up to 5MB
@@ -737,20 +737,20 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
               <h3 className="text-lg font-semibold text-gray-900">Crop Profile Picture</h3>
               <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => {
-                    setCrop({
-                      unit: '%',
-                      width: 100,
-                      height: 100,
-                      x: 0,
-                      y: 0
-                    })
-                    setCompletedCrop(undefined)
-                  }}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  title="Reset crop"
-                >
+                                 <button
+                   onClick={() => {
+                     setCrop({
+                       unit: '%',
+                       width: 80,
+                       height: 80,
+                       x: 10,
+                       y: 10
+                     })
+                     setCompletedCrop(undefined)
+                   }}
+                   className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                   title="Reset crop"
+                 >
                   <RotateCcw className="w-5 h-5" />
                 </button>
                 <button
