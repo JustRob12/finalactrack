@@ -393,7 +393,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   }
 
   return (
-    <div className="space-y-6 px-4 sm:px-0">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">My Profile</h2>
@@ -415,30 +415,8 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
         </button>
       </div>
 
-      {/* Professional Profile Card - Mobile First Design */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-        {/* Header Section */}
-        <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-4 sm:px-6 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/20 rounded-full flex items-center justify-center">
-                <User className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-lg sm:text-xl">Student Profile</h3>
-                <p className="text-orange-100 text-sm sm:text-base">Acetrack ID</p>
-              </div>
-            </div>
-            {/* <div className="text-center sm:text-right">
-              <p className="text-orange-100 text-xs sm:text-sm">Valid for</p>
-              <p className="text-white font-bold text-sm sm:text-base">2025-2026</p>
-            </div> */}
-          </div>
-        </div>
-
-        {/* Profile Content */}
-        <div className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-start space-y-6 sm:space-y-0 sm:space-x-6">
+      {/* Profile Content */}
+      <div className="flex flex-col sm:flex-row sm:items-start space-y-6 sm:space-y-0 sm:space-x-6">
             {/* Profile Picture Section */}
             <div className="flex flex-col items-center sm:items-start">
               <div className="relative">
@@ -606,8 +584,6 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
       {/* Profile Picture Edit Modal */}
       {showProfileModal && (
