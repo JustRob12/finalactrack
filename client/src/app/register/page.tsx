@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { Eye, EyeOff, GraduationCap, User, Mail, Lock, BookOpen, CheckCircle, X } from 'lucide-react'
+import { Eye, EyeOff, User, Mail, Lock, BookOpen, CheckCircle, X } from 'lucide-react'
+import Image from 'next/image'
 
 interface Course {
   id: number
@@ -250,8 +251,14 @@ export default function RegisterPage() {
       <div className="w-full max-w-2xl">
         {/* Logo and Welcome */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-500 rounded-full mb-4">
-            <GraduationCap className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
+            <Image
+              src="/images/aces-logo.png"
+              alt="ACES Logo"
+              width={64}
+              height={64}
+              className="rounded-full"
+            />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Join ACETRACK</h1>
           <p className="text-gray-600">Create your account to start tracking attendance</p>
@@ -512,7 +519,7 @@ export default function RegisterPage() {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-sm text-gray-500">
-            © 2024 FinalActrack. All rights reserved.
+            © 2025 Acetrack. All rights reserved.
           </p>
         </div>
       </div>

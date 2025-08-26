@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { Eye, EyeOff, GraduationCap } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
+import Image from 'next/image'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -35,8 +36,14 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo and Welcome */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-500 rounded-full mb-4">
-            <GraduationCap className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
+            <Image
+              src="/images/aces-logo.png"
+              alt="ACES Logo"
+              width={64}
+              height={64}
+              className="rounded-full"
+            />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back!</h1>
           <p className="text-gray-600">Sign in to your Acetrack account</p>
@@ -117,7 +124,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-sm text-gray-500">
-            © 2024 FinalActrack. All rights reserved.
+            © 2025 Acetrack. All rights reserved.
           </p>
         </div>
       </div>

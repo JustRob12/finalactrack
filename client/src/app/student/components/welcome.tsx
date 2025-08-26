@@ -33,7 +33,7 @@ export default function Welcome({ profile }: WelcomeProps) {
         Hello, {profile?.first_name} {profile?.last_name}!
       </p>
       <p className="text-gray-600 max-w-md mx-auto">
-        Welcome to FinalActrack. Here you can view events, check your attendance, and manage your profile.
+        Welcome to Acetrack. Here you can view events, check your attendance, and manage your profile.
       </p>
     </div>
   )

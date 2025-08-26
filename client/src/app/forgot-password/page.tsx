@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { GraduationCap, ArrowLeft, Mail } from 'lucide-react'
+import { ArrowLeft, Mail } from 'lucide-react'
+import Image from 'next/image'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -36,8 +37,14 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md">
         {/* Logo and Welcome */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-500 rounded-full mb-4">
-            <GraduationCap className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
+            <Image
+              src="/images/aces-logo.png"
+              alt="ACES Logo"
+              width={64}
+              height={64}
+              className="rounded-full"
+            />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Forgot Password?</h1>
           <p className="text-gray-600">No worries! Enter your email and we'll send you reset instructions.</p>
@@ -50,17 +57,17 @@ export default function ForgotPasswordPage() {
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
                 <Mail className="w-10 h-10 text-green-600" />
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Check Your Email</h2>
-                <p className="text-gray-600 mb-4">
-                  We've sent password reset instructions to:
-                </p>
-                <p className="text-orange-600 font-semibold">{email}</p>
-              </div>
+                             <div>
+                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Check Your Email</h2>
+                 <p className="text-gray-600 mb-4">
+                   We've sent password reset instructions to:
+                 </p>
+                 <p className="text-orange-600 font-semibold">{email}</p>
+               </div>
               <div className="space-y-4">
-                <p className="text-sm text-gray-500">
-                  Didn't receive the email? Check your spam folder or try again.
-                </p>
+                                 <p className="text-sm text-gray-500">
+                   Didn't receive the email? Check your spam folder or try again.
+                 </p>
                 <button
                   onClick={() => {
                     setSuccess(false)
@@ -119,7 +126,7 @@ export default function ForgotPasswordPage() {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-sm text-gray-500">
-            © 2024 FinalActrack. All rights reserved.
+            © 2025 Acetrack. All rights reserved.
           </p>
         </div>
       </div>

@@ -366,7 +366,7 @@ export default function ResetPasswordPage() {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-sm text-gray-500">
-            © 2024 FinalActrack. All rights reserved.
+            © 2025 Acetrack. All rights reserved.
           </p>
         </div>
       </div>

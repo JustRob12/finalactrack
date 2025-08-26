@@ -49,6 +49,12 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   const [courses, setCourses] = useState<Course[]>([])
   const [showEditSuccess, setShowEditSuccess] = useState(false)
   
+  // Password confirmation states
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [password, setPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [verifyingPassword, setVerifyingPassword] = useState(false)
+  
   // Cropping states
   const [crop, setCrop] = useState<CropType>({
     unit: '%',
@@ -109,6 +115,47 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   }
 
   const handleSaveProfile = async () => {
+    if (!editingProfile || !user?.id) return
+
+    // Show password modal instead of saving directly
+    setShowPasswordModal(true)
+  }
+
+  const handlePasswordVerification = async () => {
+    if (!password.trim()) {
+      setPasswordError('Please enter your password')
+      return
+    }
+
+    setVerifyingPassword(true)
+    setPasswordError('')
+
+    try {
+      // Verify password by attempting to sign in
+      const { error } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: password
+      })
+
+      if (error) {
+        setPasswordError('Incorrect password. Please try again.')
+        setPassword('')
+      } else {
+        // Password is correct, proceed with profile update
+        await updateProfile()
+        setShowPasswordModal(false)
+        setPassword('')
+        setPasswordError('')
+      }
+    } catch (error) {
+      setPasswordError('An error occurred. Please try again.')
+      setPassword('')
+    } finally {
+      setVerifyingPassword(false)
+    }
+  }
+
+  const updateProfile = async () => {
     if (!editingProfile || !user?.id) return
 
     setSavingProfile(true)
@@ -825,6 +872,85 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
                >
                  Got it!
                </button>
+             </div>
+           </div>
+         </div>
+       )}
+
+       {/* Password Confirmation Modal */}
+       {showPasswordModal && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4">
+             {/* Header */}
+             <div className="flex justify-between items-center p-6 border-b border-gray-200">
+               <h3 className="text-xl font-bold text-gray-900">
+                 Confirm Password
+               </h3>
+               <button
+                 onClick={() => {
+                   setShowPasswordModal(false)
+                   setPassword('')
+                   setPasswordError('')
+                 }}
+                 className="text-gray-400 hover:text-gray-600 transition-colors"
+               >
+                 <X className="w-6 h-6" />
+               </button>
+             </div>
+
+             {/* Content */}
+             <div className="p-6">
+               <p className="text-gray-600 mb-6">
+                 Please enter your password to confirm the changes to your profile.
+               </p>
+
+               {passwordError && (
+                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                   {passwordError}
+                 </div>
+               )}
+
+               <div className="mb-6">
+                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                   Password
+                 </label>
+                 <input
+                   id="password"
+                   type="password"
+                   value={password}
+                   onChange={(e) => setPassword(e.target.value)}
+                   onKeyPress={(e) => {
+                     if (e.key === 'Enter') {
+                       handlePasswordVerification()
+                     }
+                   }}
+                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
+                   placeholder="Enter your password"
+                   disabled={verifyingPassword}
+                 />
+               </div>
+
+               {/* Action Buttons */}
+               <div className="flex space-x-3">
+                 <button
+                   onClick={() => {
+                     setShowPasswordModal(false)
+                     setPassword('')
+                     setPasswordError('')
+                   }}
+                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl transition-colors"
+                   disabled={verifyingPassword}
+                 >
+                   Cancel
+                 </button>
+                 <button
+                   onClick={handlePasswordVerification}
+                   disabled={verifyingPassword || !password.trim()}
+                   className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                 >
+                   {verifyingPassword ? 'Verifying...' : 'Confirm Changes'}
+                 </button>
+               </div>
              </div>
            </div>
          </div>

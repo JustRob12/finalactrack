@@ -236,10 +236,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Function to send forgot password email
   const forgotPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `https://finalacetrack.vercel.app/reset-password`,
-    })
-    return { error }
+    try {
+      // First check if the email exists in the user_profiles table
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('username', email)
+        .single()
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        // If there's an error other than "no rows returned", return the error
+        return { error: profileError }
+      }
+
+      if (!profileData) {
+        // Email doesn't exist in user_profiles, return a formal message
+        return { 
+          error: new Error('The email address you entered is not registered in our system.') 
+        }
+      }
+
+      // Email exists, send the reset password email
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `https://finalacetrack.vercel.app/reset-password`,
+      })
+      return { error }
+    } catch (error) {
+      // If any error occurs during the check, fall back to the original behavior
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `https://finalacetrack.vercel.app/reset-password`,
+      })
+      return { error: resetError }
+    }
   }
 
   const value = {
