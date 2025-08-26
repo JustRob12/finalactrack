@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { User, LogOut, ChevronDown, Shield, Home, Calendar, QrCode, Users, Settings, Plus, MapPin, Clock, CheckCircle, XCircle, Upload, X, Play, Square } from 'lucide-react'
+import { User, LogOut, ChevronDown, Shield, Home, Calendar, QrCode, Users, Settings, Plus, MapPin, Clock, CheckCircle, XCircle, Upload, X, Play, Square, Clock3 } from 'lucide-react'
 import jsQR from 'jsqr'
 
 interface UserProfile {
@@ -37,6 +37,13 @@ interface Event {
 export default function AdminDashboardPage() {
   const { user, signOut, checkAndRefreshSession } = useAuth()
   const router = useRouter()
+
+  // Helper function to check if event is coming soon
+  const isEventComingSoon = (eventDate: string) => {
+    const eventStartDate = new Date(eventDate)
+    const currentDate = new Date()
+    return eventStartDate > currentDate
+  }
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [showDropdown, setShowDropdown] = useState(false)
@@ -198,7 +205,7 @@ export default function AdminDashboardPage() {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .order('start_datetime', { ascending: false })
+        .order('start_datetime', { ascending: true })
 
       if (error) {
         console.error('Error fetching events:', error)
@@ -999,7 +1006,12 @@ export default function AdminDashboardPage() {
                         )}
                         {/* Status Badge */}
                         <div className="absolute top-3 right-3">
-                          {event.status === 1 ? (
+                          {isEventComingSoon(event.start_datetime) ? (
+                            <div className="flex items-center space-x-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                              <Clock3 className="w-3 h-3" />
+                              <span>Coming Soon</span>
+                            </div>
+                          ) : event.status === 1 ? (
                             <div className="flex items-center space-x-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
                               <CheckCircle className="w-3 h-3" />
                               <span>Active</span>

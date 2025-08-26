@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Calendar, MapPin, Clock, CheckCircle } from 'lucide-react'
+import { Calendar, MapPin, Clock, CheckCircle, Clock3 } from 'lucide-react'
 
 interface Event {
   id: number
@@ -19,6 +19,13 @@ export default function Dashboard() {
   const [events, setEvents] = useState<Event[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
 
+  // Helper function to check if event is coming soon
+  const isEventComingSoon = (eventDate: string) => {
+    const eventStartDate = new Date(eventDate)
+    const currentDate = new Date()
+    return eventStartDate > currentDate
+  }
+
   useEffect(() => {
     fetchEvents()
   }, [])
@@ -32,7 +39,7 @@ export default function Dashboard() {
       const { data: allEvents, error: allEventsError } = await supabase
         .from('events')
         .select('*')
-        .order('start_datetime', { ascending: false })
+        .order('start_datetime', { ascending: true })
 
       if (allEventsError) {
         console.error('Error fetching all events:', allEventsError)
@@ -45,7 +52,7 @@ export default function Dashboard() {
         .from('events')
         .select('*')
         // .eq('status', 1) // Temporarily commented out to see all events
-        .order('start_datetime', { ascending: false })
+        .order('start_datetime', { ascending: true })
 
       if (error) {
         console.error('Error fetching events:', error)
@@ -120,10 +127,17 @@ export default function Dashboard() {
                 )}
                 {/* Status Badge */}
                 <div className="absolute top-3 right-3">
-                  <div className="flex items-center space-x-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                    <CheckCircle className="w-3 h-3" />
-                    <span>Active</span>
-                  </div>
+                  {isEventComingSoon(event.start_datetime) ? (
+                    <div className="flex items-center space-x-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                      <Clock3 className="w-3 h-3" />
+                      <span>Coming Soon</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                      <CheckCircle className="w-3 h-3" />
+                      <span>Active</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
