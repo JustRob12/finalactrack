@@ -128,6 +128,12 @@ export default function AdminDashboardPage() {
   } | null>(null)
   const [studentCount, setStudentCount] = useState<number | null>(null)
   const [studentCountLoading, setStudentCountLoading] = useState(false)
+  const [courseStats, setCourseStats] = useState<Array<{
+    course_name: string
+    short: string
+    student_count: number
+  }> | null>(null)
+  const [courseStatsLoading, setCourseStatsLoading] = useState(false)
 
   useEffect(() => {
     const checkSession = async () => {
@@ -156,6 +162,7 @@ export default function AdminDashboardPage() {
     if (activeTab === 'stats') {
       fetchEvents()
       fetchStudentCount()
+      fetchCourseStats()
     }
   }, [activeTab])
 
@@ -241,6 +248,60 @@ export default function AdminDashboardPage() {
       setStudentCount(null)
     } finally {
       setStudentCountLoading(false)
+    }
+  }
+
+  const fetchCourseStats = async () => {
+    setCourseStatsLoading(true)
+    try {
+      // Fetch course statistics with student counts
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select(`
+          course_id,
+          courses!inner(
+            course_name,
+            short
+          )
+        `)
+        .eq('role_id', 1) // Only students
+
+      if (error) {
+        console.error('Error fetching course statistics:', error)
+        setCourseStats(null)
+        return
+      }
+
+      // Group by course and count students
+      const courseCounts = new Map<string, { course_name: string; short: string; student_count: number }>()
+      
+             data?.forEach((profile) => {
+         const courseKey = profile.course_id.toString()
+         const course = profile.courses as any
+         
+         if (course && course.course_name && course.short) {
+           if (courseCounts.has(courseKey)) {
+             courseCounts.get(courseKey)!.student_count++
+           } else {
+             courseCounts.set(courseKey, {
+               course_name: course.course_name,
+               short: course.short,
+               student_count: 1
+             })
+           }
+         }
+       })
+
+      // Convert to array and sort by student count (descending)
+      const courseStatsArray = Array.from(courseCounts.values())
+        .sort((a, b) => b.student_count - a.student_count)
+
+      setCourseStats(courseStatsArray)
+    } catch (error) {
+      console.error('Error fetching course statistics:', error)
+      setCourseStats(null)
+    } finally {
+      setCourseStatsLoading(false)
     }
   }
 
@@ -1386,29 +1447,52 @@ export default function AdminDashboardPage() {
                    </select>
                        </div>
 
-                 {/* Statistics Display */}
-                                      {/* Student Count Section */}
-                     <div className="mb-8">
-                       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                         <Users className="w-5 h-5 mr-2 text-orange-600" />
-                         Overall Statistics
-                       </h3>
-                       {studentCountLoading ? (
-                         <div className="text-center py-6">
-                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600 mx-auto"></div>
-                           <p className="text-gray-600 mt-2 text-sm">Loading student count...</p>
-                         </div>
-                       ) : (
-                         <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 text-center">
-                           <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                             <Users className="w-8 h-8 text-purple-600" />
-                           </div>
-                           <h3 className="text-lg font-semibold text-purple-900 mb-2">Total Students</h3>
-                           <p className="text-3xl font-bold text-purple-600">{studentCount || 0}</p>
-                           <p className="text-sm text-purple-700 mt-1">registered students</p>
-                         </div>
-                       )}
-                     </div>
+                                   {/* Statistics Display */}
+                  {/* Overall Statistics & Course Breakdown */}
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Users className="w-5 h-5 mr-2 text-orange-600" />
+                      Student Statistics
+                    </h3>
+                    {studentCountLoading || courseStatsLoading ? (
+                      <div className="text-center py-6">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600 mx-auto"></div>
+                        <p className="text-gray-600 mt-2 text-sm">Loading statistics...</p>
+                      </div>
+                    ) : (
+                      <div className="bg-white border border-gray-200 rounded-lg p-6">
+                        {/* Total Students */}
+                        <div className="text-center mb-6 pb-6 border-b border-gray-100">
+                          <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Users className="w-8 h-8 text-orange-600" />
+                          </div>
+                          <h4 className="text-lg font-semibold text-gray-900 mb-2">Total Students</h4>
+                          <p className="text-3xl font-bold text-orange-600">{studentCount || 0}</p>
+                          <p className="text-sm text-gray-600 mt-1">registered students</p>
+                        </div>
+
+                        {/* Course Breakdown */}
+                        {courseStats && courseStats.length > 0 ? (
+                          <div>
+                            <h5 className="text-sm font-medium text-gray-700 mb-4 text-center">By Course</h5>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                              {courseStats.map((course, index) => (
+                                <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+                                  <h6 className="text-sm font-semibold text-gray-900 mb-1">{course.short}</h6>
+                                  <p className="text-lg font-bold text-orange-600">{course.student_count}</p>
+                                  <p className="text-xs text-gray-500">students</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center py-4">
+                            <p className="text-sm text-gray-500">No course data available</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                      {/* Event Statistics Section */}
                      {selectedStatsEvent && (
