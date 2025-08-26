@@ -629,6 +629,16 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 </div>
               </div>
+
+                             {/* Developer Credit */}
+               <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 mt-6">
+                 <div className="text-center">
+                   <h5 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3">Developer</h5>
+                   <p className="text-gray-600 text-sm">
+                     This website is created by <span className="font-semibold text-orange-600">Roberto Prisoris</span> using Next.js, Tailwind CSS, and Supabase
+                   </p>
+                 </div>
+               </div>
             </div>
           </div>
 
