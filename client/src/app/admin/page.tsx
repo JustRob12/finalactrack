@@ -122,18 +122,18 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     const checkSession = async () => {
-      if (!user) {
+    if (!user) {
         // Try to check and refresh session before redirecting
         const sessionValid = await checkAndRefreshSession()
         if (!sessionValid) {
           console.log('No user and session check failed, redirecting to login')
-          router.push('/login')
-          return
+      router.push('/login')
+      return
         }
-      }
-      
+    }
+
       if (user) {
-        fetchUserProfile()
+    fetchUserProfile()
       }
     }
 

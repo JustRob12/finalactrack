@@ -1,11 +1,17 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { User, Camera, Upload, X, Crop, RotateCcw } from 'lucide-react'
+import { User, Camera, Upload, X, Crop, RotateCcw, Edit, Save, CheckCircle } from 'lucide-react'
 import ReactCrop, { Crop as CropType, PixelCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
+
+interface Course {
+  id: number
+  course_name: string
+  short: string
+}
 
 interface UserProfile {
   id: string
@@ -36,6 +42,13 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   
+  // Edit mode states
+  const [isEditing, setIsEditing] = useState(false)
+  const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [showEditSuccess, setShowEditSuccess] = useState(false)
+  
   // Cropping states
   const [crop, setCrop] = useState<CropType>({
     unit: '%',
@@ -48,6 +61,102 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   const [showCropModal, setShowCropModal] = useState(false)
   const [originalImage, setOriginalImage] = useState<string | null>(null)
   const imgRef = useRef<HTMLImageElement>(null)
+
+  // Fetch courses for dropdown
+  useEffect(() => {
+    fetchCourses()
+  }, [])
+
+  const fetchCourses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, course_name, short')
+        .order('course_name')
+      
+      if (error) throw error
+      setCourses(data || [])
+    } catch (error) {
+      console.error('Error fetching courses:', error)
+    }
+  }
+
+  // Initialize editing profile when entering edit mode
+  useEffect(() => {
+    if (isEditing && profile) {
+      setEditingProfile({ ...profile })
+    }
+  }, [isEditing, profile])
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // Cancel editing
+      setIsEditing(false)
+      setEditingProfile(null)
+    } else {
+      // Start editing
+      setIsEditing(true)
+    }
+  }
+
+  const handleEditInputChange = (field: keyof UserProfile, value: string | number) => {
+    if (editingProfile) {
+      setEditingProfile({
+        ...editingProfile,
+        [field]: value
+      })
+    }
+  }
+
+  const handleSaveProfile = async () => {
+    if (!editingProfile || !user?.id) return
+
+    setSavingProfile(true)
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          first_name: editingProfile.first_name,
+          middle_initial: editingProfile.middle_initial,
+          last_name: editingProfile.last_name,
+          course_id: editingProfile.course_id,
+          year_level: editingProfile.year_level
+        })
+        .eq('id', user.id)
+
+      if (error) {
+        console.error('Error updating profile:', error)
+        alert('Failed to update profile. Please try again.')
+      } else {
+        console.log('Profile updated successfully')
+        
+        // Update the profile state with new data including course info
+        const updatedCourse = courses.find(c => c.id === editingProfile.course_id)
+        const updatedProfile = {
+          ...editingProfile,
+          course: updatedCourse
+        }
+        
+        if (onProfileUpdate) {
+          onProfileUpdate(updatedProfile)
+        }
+        
+        setIsEditing(false)
+        setEditingProfile(null)
+        setShowEditSuccess(true)
+        
+        // Hide success message after 3 seconds
+        setTimeout(() => {
+          setShowEditSuccess(false)
+        }, 3000)
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error)
+      alert('An unexpected error occurred. Please try again.')
+    } finally {
+      setSavingProfile(false)
+    }
+  }
 
   const handleImageUpload = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -288,6 +397,22 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">My Profile</h2>
+        <button
+          onClick={handleEditToggle}
+          className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+        >
+          {isEditing ? (
+            <>
+              <X className="w-4 h-4" />
+              <span>Cancel</span>
+            </>
+          ) : (
+            <>
+              <Edit className="w-4 h-4" />
+              <span>Edit Profile</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Professional Profile Card - Mobile First Design */}
@@ -347,9 +472,47 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
             {/* Profile Details */}
             <div className="flex-1 space-y-4 sm:space-y-6">
               <div className="text-center sm:text-left">
-                <h4 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
-                  {profile?.first_name} {profile?.middle_initial} {profile?.last_name}
-                </h4>
+                {isEditing ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">First Name</label>
+                        <input
+                          type="text"
+                          value={editingProfile?.first_name || ''}
+                          onChange={(e) => handleEditInputChange('first_name', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                          placeholder="First Name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Middle Initial</label>
+                        <input
+                          type="text"
+                          value={editingProfile?.middle_initial || ''}
+                          onChange={(e) => handleEditInputChange('middle_initial', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                          placeholder="M.I."
+                          maxLength={1}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Last Name</label>
+                        <input
+                          type="text"
+                          value={editingProfile?.last_name || ''}
+                          onChange={(e) => handleEditInputChange('last_name', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                          placeholder="Last Name"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <h4 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
+                    {profile?.first_name} {profile?.middle_initial} {profile?.last_name}
+                  </h4>
+                )}
                 <p className="text-orange-600 font-semibold text-sm sm:text-base">Student</p>
               </div>
 
@@ -365,13 +528,73 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
                 </div>
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Year Level</label>
-                  <p className="text-gray-900 font-semibold text-sm sm:text-base">{profile?.year_level}</p>
+                  {isEditing ? (
+                    <select
+                      value={editingProfile?.year_level || ''}
+                      onChange={(e) => handleEditInputChange('year_level', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                    >
+                      <option value="">Select Year Level</option>
+                      <option value="1st Year">1st Year</option>
+                      <option value="2nd Year">2nd Year</option>
+                      <option value="3rd Year">3rd Year</option>
+                      <option value="4th Year">4th Year</option>
+                      <option value="5th Year">5th Year</option>
+                    </select>
+                  ) : (
+                    <p className="text-gray-900 font-semibold text-sm sm:text-base">{profile?.year_level}</p>
+                  )}
                 </div>
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Course</label>
-                  <p className="text-gray-900 font-semibold text-sm sm:text-base">{profile?.course?.course_name || 'Not specified'}</p>
+                  {isEditing ? (
+                    <select
+                      value={editingProfile?.course_id || ''}
+                      onChange={(e) => handleEditInputChange('course_id', parseInt(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                    >
+                      <option value="">Select Course</option>
+                      {courses.map((course) => (
+                        <option key={course.id} value={course.id}>
+                          {course.course_name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-gray-900 font-semibold text-sm sm:text-base">{profile?.course?.course_name || 'Not specified'}</p>
+                  )}
                 </div>
               </div>
+
+              {/* Save Button for Edit Mode */}
+              {isEditing && (
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={handleEditToggle}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    disabled={savingProfile}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={savingProfile || !editingProfile?.first_name || !editingProfile?.last_name || !editingProfile?.course_id || !editingProfile?.year_level}
+                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {savingProfile ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>Save Changes</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
 
               {/* Additional Professional Details */}
               <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
@@ -590,6 +813,38 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
                {/* Action Button */}
                <button
                  onClick={() => setShowSuccessModal(false)}
+                 className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+               >
+                 Got it!
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+
+       {/* Profile Edit Success Modal */}
+       {showEditSuccess && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4">
+             {/* Success Icon */}
+             <div className="flex justify-center pt-8 pb-4">
+               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+                 <CheckCircle className="w-12 h-12 text-green-600" />
+               </div>
+             </div>
+
+             {/* Success Content */}
+             <div className="px-6 pb-6 text-center">
+               <h3 className="text-xl font-bold text-gray-900 mb-2">
+                 Profile Updated Successfully!
+               </h3>
+               <p className="text-gray-600 mb-6">
+                 Your profile information has been saved. The changes will be reflected in your profile and QR code.
+               </p>
+
+               {/* Action Button */}
+               <button
+                 onClick={() => setShowEditSuccess(false)}
                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
                >
                  Got it!

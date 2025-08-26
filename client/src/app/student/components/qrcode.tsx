@@ -318,8 +318,8 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
 
                {/* Course - Below Student ID */}
                <div className="text-center">
-                 <p className="text-base font-bold text-orange-600 tracking-wider">
-                   {profile?.course?.short || profile?.course?.course_name?.toUpperCase() || 'BSIT' }
+                 <p className="font-base font-semibold text-orange-900 tracking-wider">
+                   {profile?.course?.short || profile?.course?.course_name?.toUpperCase() || 'BSIT' } - {profile?.year_level?.toUpperCase()}
                  </p>
                </div>
 
