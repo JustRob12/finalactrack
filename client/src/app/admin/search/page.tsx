@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { ArrowLeft, Search, User, BookOpen, GraduationCap } from 'lucide-react'
+import { ArrowLeft, Search, User, BookOpen, GraduationCap, CheckCircle, XCircle } from 'lucide-react'
 
 interface StudentProfile {
   id: string
@@ -21,6 +21,22 @@ interface StudentProfile {
   } | null
 }
 
+interface Event {
+  id: number
+  name: string
+  start_datetime: string
+  end_datetime: string
+  status: number
+}
+
+interface AttendanceStatus {
+  event_id: number
+  event_name: string
+  isPresent: boolean
+  time_in?: string
+  time_out?: string
+}
+
 export default function SearchStudentPage() {
   const { user, checkAndRefreshSession } = useAuth()
   const router = useRouter()
@@ -30,6 +46,8 @@ export default function SearchStudentPage() {
   const [searching, setSearching] = useState(false)
   const [student, setStudent] = useState<StudentProfile | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus[]>([])
+  const [loadingAttendance, setLoadingAttendance] = useState(false)
 
   useEffect(() => {
     const checkSession = async () => {
@@ -69,6 +87,7 @@ export default function SearchStudentPage() {
     setSearching(true)
     setError(null)
     setStudent(null)
+    setAttendanceStatus([])
 
     try {
       const { data, error } = await supabase
@@ -109,11 +128,65 @@ export default function SearchStudentPage() {
       }
 
       setStudent(transformedData)
+      
+      // Fetch attendance status for this student
+      await fetchAttendanceStatus(transformedData.student_id)
     } catch (error) {
       console.error('Error searching for student:', error)
       setError('An unexpected error occurred. Please try again.')
     } finally {
       setSearching(false)
+    }
+  }
+
+  const fetchAttendanceStatus = async (studentId: string) => {
+    setLoadingAttendance(true)
+    try {
+      // First, get all events
+      const { data: events, error: eventsError } = await supabase
+        .from('events')
+        .select('id, name, start_datetime, end_datetime, status')
+        .order('start_datetime', { ascending: false })
+
+      if (eventsError) {
+        console.error('Error fetching events:', eventsError)
+        return
+      }
+
+      // Then, get attendance records for this student
+      const { data: attendance, error: attendanceError } = await supabase
+        .from('attendance')
+        .select('event_id, time_in, time_out')
+        .eq('student_id', studentId)
+
+      if (attendanceError) {
+        console.error('Error fetching attendance:', attendanceError)
+        return
+      }
+
+      // Create a map of event_id to attendance data
+      const attendanceMap = new Map()
+      attendance?.forEach(record => {
+        attendanceMap.set(record.event_id, record)
+      })
+
+      // Create attendance status array
+      const statusArray: AttendanceStatus[] = events?.map(event => {
+        const attendanceRecord = attendanceMap.get(event.id)
+        return {
+          event_id: event.id,
+          event_name: event.name,
+          isPresent: !!attendanceRecord,
+          time_in: attendanceRecord?.time_in,
+          time_out: attendanceRecord?.time_out
+        }
+      }) || []
+
+      setAttendanceStatus(statusArray)
+    } catch (error) {
+      console.error('Error fetching attendance status:', error)
+    } finally {
+      setLoadingAttendance(false)
     }
   }
 
@@ -243,18 +316,51 @@ export default function SearchStudentPage() {
                       </span>
                     </div>
 
-                    {/* Year Level */}
-                    <div className="flex items-center space-x-2 text-gray-600">
-                      <GraduationCap className="w-4 h-4" />
-                      <span className="text-sm">{student.year_level}</span>
-                    </div>
-                  </div>
-                </div>
+                                         {/* Year Level */}
+                     <div className="flex items-center space-x-2 text-gray-600">
+                       <GraduationCap className="w-4 h-4" />
+                       <span className="text-sm">{student.year_level}</span>
+                     </div>
+                   </div>
+                 </div>
 
-
-              </div>
-            </div>
-          )}
+                 {/* Attendance Status */}
+                 <div className="mt-6 pt-6 border-t border-gray-200">
+                   <h5 className="text-sm font-medium text-gray-900 mb-3">Event Attendance</h5>
+                   {loadingAttendance ? (
+                     <div className="flex items-center justify-center py-4">
+                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
+                       <span className="ml-2 text-sm text-gray-600">Loading attendance...</span>
+                     </div>
+                   ) : attendanceStatus.length > 0 ? (
+                     <div className="space-y-2">
+                       {attendanceStatus.map((status) => (
+                         <div key={status.event_id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                           <div className="flex items-center space-x-2">
+                             {status.isPresent ? (
+                               <CheckCircle className="w-4 h-4 text-green-600" />
+                             ) : (
+                               <XCircle className="w-4 h-4 text-red-600" />
+                             )}
+                             <span className="text-sm text-gray-700">{status.event_name}</span>
+                           </div>
+                           <div className="flex items-center space-x-1">
+                             {status.isPresent ? (
+                               <span className="text-xs text-green-600 font-medium">Present</span>
+                             ) : (
+                               <span className="text-xs text-red-600 font-medium">Absent</span>
+                             )}
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   ) : (
+                     <p className="text-sm text-gray-500 text-center py-4">No events found</p>
+                   )}
+                 </div>
+               </div>
+             </div>
+           )}
 
           {/* Instructions */}
           {!student && !error && (
