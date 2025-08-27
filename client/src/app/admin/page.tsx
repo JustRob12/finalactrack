@@ -298,29 +298,47 @@ export default function AdminDashboardPage() {
   const fetchCourseStats = async () => {
     setCourseStatsLoading(true)
     try {
-      // Fetch all students with role_id = 1 (no limit)
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select(`
-          course_id,
-          courses!inner(
-            course_name,
-            short
-          )
-        `)
-        .eq('role_id', 1) // Only students
-        .limit(10000) // Set a high limit to get all students
-
-      if (error) {
-        console.error('Error fetching course statistics:', error)
-        setCourseStats(null)
-        return
+      // Fetch all students with role_id = 1 using pagination
+      let allData: any[] = []
+      let from = 0
+      const pageSize = 1000
+      
+      while (true) {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select(`
+            course_id,
+            courses!inner(
+              course_name,
+              short
+            )
+          `)
+          .eq('role_id', 1) // Only students
+          .range(from, from + pageSize - 1)
+        
+        if (error) {
+          console.error('Error fetching course statistics:', error)
+          setCourseStats(null)
+          return
+        }
+        
+        if (!data || data.length === 0) {
+          break // No more data
+        }
+        
+        allData = allData.concat(data)
+        from += pageSize
+        
+        // If we got less than pageSize, we've reached the end
+        if (data.length < pageSize) {
+          break
+        }
       }
 
       // Group by course and count students
       const courseCounts = new Map<string, { course_name: string; short: string; student_count: number }>()
       
-      data?.forEach((profile) => {
+      allData.forEach((profile: any) => {
         const courseKey = profile.course_id.toString()
         const course = profile.courses as any
         
@@ -372,41 +390,60 @@ export default function AdminDashboardPage() {
   const fetchFilteredStats = async () => {
     setFilteredStatsLoading(true)
     try {
-      // Build query based on filters
-      let query = supabase
-        .from('user_profiles')
-        .select(`
-          id,
-          course_id,
-          year_level,
-          courses!inner(
-            course_name,
-            short
-          )
-        `)
-        .eq('role_id', 1) // Only students
-        .limit(10000) // Set a high limit to get all students
+      // Fetch all students with role_id = 1 using pagination
+      let allData: any[] = []
+      let from = 0
+      const pageSize = 1000
+      
+      while (true) {
+        // Build query based on filters
+        let query = supabase
+          .from('user_profiles')
+          .select(`
+            id,
+            course_id,
+            year_level,
+            courses!inner(
+              course_name,
+              short
+            )
+          `)
+          .eq('role_id', 1) // Only students
+          .range(from, from + pageSize - 1)
 
-      // Apply course filter
-      if (selectedCourseFilter !== 'all') {
-        query = query.eq('course_id', selectedCourseFilter)
-      }
+        // Apply course filter
+        if (selectedCourseFilter !== 'all') {
+          query = query.eq('course_id', selectedCourseFilter)
+        }
 
-      // Apply year level filter
-      if (selectedYearFilter !== 'all') {
-        query = query.eq('year_level', selectedYearFilter)
-      }
+        // Apply year level filter
+        if (selectedYearFilter !== 'all') {
+          query = query.eq('year_level', selectedYearFilter)
+        }
 
-      const { data, error } = await query
+        const { data, error } = await query
 
-      if (error) {
-        console.error('Error fetching filtered statistics:', error)
-        setFilteredStats(null)
-        return
+        if (error) {
+          console.error('Error fetching filtered statistics:', error)
+          setFilteredStats(null)
+          return
+        }
+        
+        if (!data || data.length === 0) {
+          break // No more data
+        }
+        
+        allData = allData.concat(data)
+        from += pageSize
+        
+        // If we got less than pageSize, we've reached the end
+        if (data.length < pageSize) {
+          break
+        }
       }
 
       // Process data to create comprehensive statistics
-      const totalStudents = data?.length || 0
+      const totalStudents = allData.length || 0
 
       // Group by course
       const courseMap = new Map<string, {
@@ -423,7 +460,7 @@ export default function AdminDashboardPage() {
         courses: Map<string, number>
       }>()
 
-      data?.forEach((profile) => {
+      allData.forEach((profile: any) => {
         const course = profile.courses as any
         const courseKey = profile.course_id.toString()
         const yearKey = profile.year_level
