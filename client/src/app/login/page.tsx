@@ -95,11 +95,11 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              <div className="text-right mt-2">
+              {/* <div className="text-right mt-2">
                 <Link href="/forgot-password" className="text-sm text-orange-500 hover:text-orange-600 font-medium">
                   Forgot Password?
                 </Link>
-              </div>
+              </div> */}
             </div>
 
             <button
