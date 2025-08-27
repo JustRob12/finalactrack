@@ -1203,11 +1203,14 @@ export default function AdminDashboardPage() {
                 <button
                   onClick={() => {
                     setShowDropdown(false)
-                    // Add admin profile functionality here
+                    router.push('/admin/search')
                   }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center"
                 >
-                  Profile
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  Search Student
                 </button>
                 <button
                   onClick={() => {
@@ -1809,13 +1812,7 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {activeTab === 'profile' && (
-            <div className="text-center py-12">
-              <Settings className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Profile</h2>
-              <p className="text-gray-600">Admin profile settings will be added here.</p>
-            </div>
-          )}
+
         </div>
       </main>
 
@@ -1847,17 +1844,19 @@ export default function AdminDashboardPage() {
              <span className="text-xs mt-1 text-gray-500">QR Scanner</span>
            </button>
 
-           {/* Statistics */}
-           <button
-             onClick={() => setActiveTab('stats')}
-             className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
-               activeTab === 'stats' ? 'text-orange-600' : 'text-gray-500'
-             }`}
-           >
-             <Users className={`w-6 h-6 ${activeTab === 'stats' ? 'text-orange-600' : 'text-gray-400'}`} />
-             <span className="text-xs mt-1">Stats</span>
-           </button>
-                 </div>
+                       {/* Statistics */}
+            <button
+              onClick={() => setActiveTab('stats')}
+              className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
+                activeTab === 'stats' ? 'text-orange-600' : 'text-gray-500'
+              }`}
+            >
+              <Users className={`w-6 h-6 ${activeTab === 'stats' ? 'text-orange-600' : 'text-gray-400'}`} />
+              <span className="text-xs mt-1">Stats</span>
+            </button>
+
+
+                  </div>
        </nav>
 
        {/* Add Event Modal */}
