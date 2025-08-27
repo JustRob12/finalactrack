@@ -1696,7 +1696,7 @@ export default function AdminDashboardPage() {
                          <Users className="w-10 h-10 text-orange-600" />
                        </div>
                        <h3 className="text-2xl font-bold text-gray-900 mb-2">Total Students</h3>
-                       <p className="text-4xl font-bold text-orange-600">{filteredStats.totalStudents}</p>
+                       <p className="text-6xl font-bold text-orange-600">{filteredStats.totalStudents}</p>
                        <p className="text-sm text-gray-600 mt-2">
                          {selectedCourseFilter !== 'all' && `Filtered by course`}
                          {selectedYearFilter !== 'all' && `Filtered by year level`}
@@ -1716,7 +1716,7 @@ export default function AdminDashboardPage() {
                              <div key={index} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
                                <div className="text-center mb-4">
                                  <h4 className="text-lg font-semibold text-gray-900 mb-1">{course.course_name}</h4>
-                                 <p className="text-sm text-gray-500 mb-3">({course.short})</p>
+                             
                                  <div className="text-3xl font-bold text-orange-600">{course.student_count}</div>
                                  <p className="text-sm text-gray-600">students</p>
                                </div>
