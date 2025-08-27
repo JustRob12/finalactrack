@@ -298,42 +298,48 @@ export default function AdminDashboardPage() {
   const fetchCourseStats = async () => {
     setCourseStatsLoading(true)
     try {
-      // First, get all courses
-      const { data: coursesData, error: coursesError } = await supabase
-        .from('courses')
-        .select('id, course_name, short')
-        .order('course_name')
+      // Fetch all students with role_id = 1 (no limit)
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select(`
+          course_id,
+          courses!inner(
+            course_name,
+            short
+          )
+        `)
+        .eq('role_id', 1) // Only students
+        .limit(10000) // Set a high limit to get all students
 
-      if (coursesError) {
-        console.error('Error fetching courses:', coursesError)
+      if (error) {
+        console.error('Error fetching course statistics:', error)
         setCourseStats(null)
         return
       }
 
-      // Then, get count for each course
-      const courseStatsArray = []
+      // Group by course and count students
+      const courseCounts = new Map<string, { course_name: string; short: string; student_count: number }>()
       
-      for (const course of coursesData || []) {
-        const { count, error: countError } = await supabase
-          .from('user_profiles')
-          .select('*', { count: 'exact', head: true })
-          .eq('role_id', 1) // Only students
-          .eq('course_id', course.id)
-
-        if (countError) {
-          console.error(`Error fetching count for course ${course.course_name}:`, countError)
-          continue
+      data?.forEach((profile) => {
+        const courseKey = profile.course_id.toString()
+        const course = profile.courses as any
+        
+        if (course && course.course_name && course.short) {
+          if (courseCounts.has(courseKey)) {
+            courseCounts.get(courseKey)!.student_count++
+          } else {
+            courseCounts.set(courseKey, {
+              course_name: course.course_name,
+              short: course.short,
+              student_count: 1
+            })
+          }
         }
+      })
 
-        courseStatsArray.push({
-          course_name: course.course_name,
-          short: course.short,
-          student_count: count || 0
-        })
-      }
-
-      // Sort by student count (descending)
-      courseStatsArray.sort((a, b) => b.student_count - a.student_count)
+      // Convert to array and sort by student count (descending)
+      const courseStatsArray = Array.from(courseCounts.values())
+        .sort((a, b) => b.student_count - a.student_count)
 
       setCourseStats(courseStatsArray)
     } catch (error) {
@@ -366,147 +372,119 @@ export default function AdminDashboardPage() {
   const fetchFilteredStats = async () => {
     setFilteredStatsLoading(true)
     try {
-      // Get total count first
-      let countQuery = supabase
+      // Build query based on filters
+      let query = supabase
         .from('user_profiles')
-        .select('*', { count: 'exact', head: true })
+        .select(`
+          id,
+          course_id,
+          year_level,
+          courses!inner(
+            course_name,
+            short
+          )
+        `)
         .eq('role_id', 1) // Only students
+        .limit(10000) // Set a high limit to get all students
 
       // Apply course filter
       if (selectedCourseFilter !== 'all') {
-        countQuery = countQuery.eq('course_id', selectedCourseFilter)
+        query = query.eq('course_id', selectedCourseFilter)
       }
 
       // Apply year level filter
       if (selectedYearFilter !== 'all') {
-        countQuery = countQuery.eq('year_level', selectedYearFilter)
+        query = query.eq('year_level', selectedYearFilter)
       }
 
-      const { count: totalStudents, error: countError } = await countQuery
+      const { data, error } = await query
 
-      if (countError) {
-        console.error('Error fetching total count:', countError)
+      if (error) {
+        console.error('Error fetching filtered statistics:', error)
         setFilteredStats(null)
         return
       }
 
-      // Get all courses for detailed breakdown
-      const { data: coursesData, error: coursesError } = await supabase
-        .from('courses')
-        .select('id, course_name, short')
-        .order('course_name')
+      // Process data to create comprehensive statistics
+      const totalStudents = data?.length || 0
 
-      if (coursesError) {
-        console.error('Error fetching courses:', coursesError)
-        setFilteredStats(null)
-        return
-      }
+      // Group by course
+      const courseMap = new Map<string, {
+        course_name: string
+        short: string
+        student_count: number
+        yearLevels: Map<string, number>
+      }>()
 
-      // Get counts for each course
-      const byCourse = []
-      for (const course of coursesData || []) {
-        let courseCountQuery = supabase
-          .from('user_profiles')
-          .select('*', { count: 'exact', head: true })
-          .eq('role_id', 1)
-          .eq('course_id', course.id)
+      // Group by year level
+      const yearMap = new Map<string, {
+        year_level: string
+        count: number
+        courses: Map<string, number>
+      }>()
 
-        // Apply year level filter if selected
-        if (selectedYearFilter !== 'all') {
-          courseCountQuery = courseCountQuery.eq('year_level', selectedYearFilter)
-        }
+      data?.forEach((profile) => {
+        const course = profile.courses as any
+        const courseKey = profile.course_id.toString()
+        const yearKey = profile.year_level
 
-        const { count: courseCount, error: courseCountError } = await courseCountQuery
-
-        if (courseCountError) {
-          console.error(`Error fetching count for course ${course.course_name}:`, courseCountError)
-          continue
-        }
-
-        if ((courseCount || 0) > 0) {
-          // Get year level breakdown for this course
-          const courseYearLevels = []
-          for (const yearLevel of yearLevels) {
-            let yearCountQuery = supabase
-              .from('user_profiles')
-              .select('*', { count: 'exact', head: true })
-              .eq('role_id', 1)
-              .eq('course_id', course.id)
-              .eq('year_level', yearLevel)
-
-            const { count: yearCount, error: yearCountError } = await yearCountQuery
-
-            if (!yearCountError && (yearCount || 0) > 0) {
-              courseYearLevels.push({
-                year_level: yearLevel,
-                count: yearCount || 0
-              })
-            }
+        // Process course grouping
+        if (course && course.course_name && course.short) {
+          if (!courseMap.has(courseKey)) {
+            courseMap.set(courseKey, {
+              course_name: course.course_name,
+              short: course.short,
+              student_count: 0,
+              yearLevels: new Map()
+            })
           }
+          const courseData = courseMap.get(courseKey)!
+          courseData.student_count++
+          
+          // Count by year level within course
+          courseData.yearLevels.set(yearKey, (courseData.yearLevels.get(yearKey) || 0) + 1)
+        }
 
-          byCourse.push({
-            course_name: course.course_name,
-            short: course.short,
-            student_count: courseCount || 0,
-            yearLevels: courseYearLevels.sort((a, b) => a.year_level.localeCompare(b.year_level))
+        // Process year level grouping
+        if (!yearMap.has(yearKey)) {
+          yearMap.set(yearKey, {
+            year_level: yearKey,
+            count: 0,
+            courses: new Map()
           })
         }
-      }
-
-      // Sort by student count (descending)
-      byCourse.sort((a, b) => (b.student_count || 0) - (a.student_count || 0))
-
-      // Get year level breakdown
-      const byYearLevel = []
-      for (const yearLevel of yearLevels) {
-        let yearCountQuery = supabase
-          .from('user_profiles')
-          .select('*', { count: 'exact', head: true })
-          .eq('role_id', 1)
-          .eq('year_level', yearLevel)
-
-        // Apply course filter if selected
-        if (selectedCourseFilter !== 'all') {
-          yearCountQuery = yearCountQuery.eq('course_id', selectedCourseFilter)
+        const yearData = yearMap.get(yearKey)!
+        yearData.count++
+        
+        // Count by course within year level
+        if (course && course.course_name) {
+          yearData.courses.set(course.course_name, (yearData.courses.get(course.course_name) || 0) + 1)
         }
+      })
 
-        const { count: yearCount, error: yearCountError } = await yearCountQuery
+      // Convert maps to arrays
+      const byCourse = Array.from(courseMap.values()).map(course => ({
+        course_name: course.course_name,
+        short: course.short,
+        student_count: course.student_count,
+        yearLevels: Array.from(course.yearLevels.entries()).map(([year_level, count]) => ({
+          year_level,
+          count
+        })).sort((a, b) => a.year_level.localeCompare(b.year_level))
+      })).sort((a, b) => b.student_count - a.student_count)
 
-        if (!yearCountError && (yearCount || 0) > 0) {
-          // Get course breakdown for this year level
-          const courses = []
-          for (const course of coursesData || []) {
-            let courseYearCountQuery = supabase
-              .from('user_profiles')
-              .select('*', { count: 'exact', head: true })
-              .eq('role_id', 1)
-              .eq('year_level', yearLevel)
-              .eq('course_id', course.id)
-
-            const { count: courseYearCount, error: courseYearCountError } = await courseYearCountQuery
-
-            if (!courseYearCountError && (courseYearCount || 0) > 0) {
-              courses.push({
-                course_name: course.course_name,
-                short: course.short,
-                count: courseYearCount || 0
-              })
-            }
-          }
-
-          byYearLevel.push({
-            year_level: yearLevel,
-            count: yearCount || 0,
-            courses: courses.sort((a, b) => (b.count || 0) - (a.count || 0))
-          })
-        }
-      }
-
-      // Sort by year level
-      byYearLevel.sort((a, b) => a.year_level.localeCompare(b.year_level))
+      const byYearLevel = Array.from(yearMap.values()).map(year => ({
+        year_level: year.year_level,
+        count: year.count,
+        courses: Array.from(year.courses.entries()).map(([course_name, count]) => ({
+          course_name,
+          short: courses.find(c => c.course_name === course_name)?.short || course_name,
+          count
+        })).sort((a, b) => b.count - a.count)
+      })).sort((a, b) => a.year_level.localeCompare(b.year_level))
 
       setFilteredStats({
-        totalStudents: totalStudents || 0,
+        totalStudents,
         byCourse,
         byYearLevel
       })

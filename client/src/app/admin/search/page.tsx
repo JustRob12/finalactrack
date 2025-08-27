@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { ArrowLeft, Search, User, BookOpen, GraduationCap, CheckCircle, XCircle } from 'lucide-react'
+import { ArrowLeft, Search, User, BookOpen, GraduationCap, CheckCircle, XCircle, Trash2 } from 'lucide-react'
 
 interface StudentProfile {
   id: string
@@ -48,6 +48,9 @@ export default function SearchStudentPage() {
   const [error, setError] = useState<string | null>(null)
   const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus[]>([])
   const [loadingAttendance, setLoadingAttendance] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletingStudent, setDeletingStudent] = useState<StudentProfile | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     const checkSession = async () => {
@@ -196,6 +199,46 @@ export default function SearchStudentPage() {
     }
   }
 
+  const handleDeleteStudent = async () => {
+    if (!deletingStudent) return
+
+    setDeleteLoading(true)
+    try {
+      // Delete from user_profiles table
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('id', deletingStudent.id)
+
+      if (profileError) {
+        console.error('Error deleting student profile:', profileError)
+        setError('Failed to delete student. Please try again.')
+        return
+      }
+
+      // Clear the search results
+      setStudent(null)
+      setAttendanceStatus([])
+      setSearchQuery('')
+      setShowDeleteModal(false)
+      setDeletingStudent(null)
+      
+      // Show success message
+      setError(null)
+      // You could add a success state here if needed
+    } catch (error) {
+      console.error('Error deleting student:', error)
+      setError('An unexpected error occurred while deleting the student.')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
+  const openDeleteModal = (student: StudentProfile) => {
+    setDeletingStudent(student)
+    setShowDeleteModal(true)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -272,13 +315,22 @@ export default function SearchStudentPage() {
             )}
           </div>
 
-          {/* Student Card */}
-          {student && (
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
-              {/* Header */}
-              <div className="bg-gradient-to-r from-orange-50 to-orange-100 px-6 py-4">
-                <h3 className="text-lg font-semibold text-gray-900">Student Information</h3>
-              </div>
+                     {/* Student Card */}
+           {student && (
+             <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+               {/* Header */}
+               <div className="bg-gradient-to-r from-orange-50 to-orange-100 px-6 py-4 relative">
+                 <h3 className="text-lg font-semibold text-gray-900">Student Information</h3>
+                 
+                 {/* Delete Button - Top Right Corner */}
+                 <button
+                   onClick={() => openDeleteModal(student)}
+                   className="absolute top-3 right-3 p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center"
+                   title="Delete Student"
+                 >
+                   <Trash2 className="w-4 h-4" />
+                 </button>
+               </div>
 
               {/* Student Details */}
               <div className="p-6">
@@ -321,8 +373,8 @@ export default function SearchStudentPage() {
                        <GraduationCap className="w-4 h-4" />
                        <span className="text-sm">{student.year_level}</span>
                      </div>
+                                        </div>
                    </div>
-                 </div>
 
                  {/* Attendance Status */}
                  <div className="mt-6 pt-6 border-t border-gray-200">
@@ -378,9 +430,89 @@ export default function SearchStudentPage() {
                 <li>• Press Enter or click Search to find the student</li>
               </ul>
             </div>
-          )}
-        </div>
-      </main>
-    </div>
-  )
-}
+                     )}
+         </div>
+       </main>
+
+       {/* Delete Confirmation Modal */}
+       {showDeleteModal && deletingStudent && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+             {/* Modal Header */}
+             <div className="flex items-center justify-between p-6 border-b border-gray-200">
+               <h3 className="text-lg font-semibold text-gray-900">Delete Student</h3>
+               <button
+                 onClick={() => {
+                   setShowDeleteModal(false)
+                   setDeletingStudent(null)
+                 }}
+                 className="text-gray-400 hover:text-gray-600 transition-colors"
+               >
+                 <XCircle className="w-6 h-6" />
+               </button>
+             </div>
+
+             {/* Modal Body */}
+             <div className="p-6">
+               <div className="flex items-center space-x-3 mb-4">
+                 <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                   <Trash2 className="w-6 h-6 text-red-600" />
+                 </div>
+                 <div>
+                   <h4 className="text-lg font-medium text-gray-900">Are you sure?</h4>
+                   <p className="text-sm text-gray-600">This action cannot be undone.</p>
+                 </div>
+               </div>
+               
+               <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                 <h5 className="font-medium text-gray-900 mb-2">
+                   {deletingStudent.first_name} {deletingStudent.middle_initial} {deletingStudent.last_name}
+                 </h5>
+                 <div className="text-sm text-gray-600 space-y-1">
+                   <p><span className="font-medium">Student ID:</span> {deletingStudent.student_id}</p>
+                   <p><span className="font-medium">Course:</span> {deletingStudent.course?.course_name} ({deletingStudent.course?.short})</p>
+                   <p><span className="font-medium">Year Level:</span> {deletingStudent.year_level}</p>
+                 </div>
+               </div>
+
+               <p className="text-sm text-gray-600 mb-6">
+                 This will permanently delete the student and all associated data including attendance records. This action cannot be undone.
+               </p>
+             </div>
+
+             {/* Modal Footer */}
+             <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+               <button
+                 onClick={() => {
+                   setShowDeleteModal(false)
+                   setDeletingStudent(null)
+                 }}
+                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                 disabled={deleteLoading}
+               >
+                 Cancel
+               </button>
+               <button
+                 onClick={handleDeleteStudent}
+                 disabled={deleteLoading}
+                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+               >
+                 {deleteLoading ? (
+                   <>
+                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                     <span>Deleting...</span>
+                   </>
+                 ) : (
+                   <>
+                     <Trash2 className="w-4 h-4" />
+                     <span>Delete Student</span>
+                   </>
+                 )}
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+     </div>
+   )
+ }
