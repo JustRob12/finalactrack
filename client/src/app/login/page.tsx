@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
 import { Eye, EyeOff } from 'lucide-react'
 import Image from 'next/image'
 
@@ -27,7 +28,40 @@ export default function LoginPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      // Check user role and redirect accordingly
+      try {
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('role_id')
+          .eq('username', email)
+          .maybeSingle()
+
+        if (profileError) {
+          console.error('Error fetching user profile:', profileError)
+          router.push('/dashboard')
+          return
+        }
+
+        if (profile) {
+          switch (profile.role_id) {
+            case 0: // Admin
+              router.push('/admin')
+              break
+            case 2: // Scanner
+              router.push('/scanner')
+              break
+            default: // Student (role_id = 1) or any other role
+              router.push('/dashboard')
+              break
+          }
+        } else {
+          // No profile found, redirect to dashboard
+          router.push('/dashboard')
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error)
+        router.push('/dashboard')
+      }
     }
   }
 
