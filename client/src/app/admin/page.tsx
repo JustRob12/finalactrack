@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { User, LogOut, ChevronDown, Shield, Home, Calendar, QrCode, Users, Settings, Plus, MapPin, Clock, CheckCircle, XCircle, Upload, X, Play, Square, Clock3 } from 'lucide-react'
+import { User, LogOut, ChevronDown, Shield, Home, Calendar, QrCode, Users, Settings, Plus, MapPin, Clock, CheckCircle, XCircle, Upload, X, Play, Square, Clock3, BookOpen } from 'lucide-react'
 import jsQR from 'jsqr'
 
 interface UserProfile {
@@ -134,6 +134,42 @@ export default function AdminDashboardPage() {
     student_count: number
   }> | null>(null)
   const [courseStatsLoading, setCourseStatsLoading] = useState(false)
+  
+  // Enhanced filtering states
+  const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>('all')
+  const [selectedYearFilter, setSelectedYearFilter] = useState<string>('all')
+  const [courses, setCourses] = useState<Array<{
+    id: number
+    course_name: string
+    short: string
+  }>>([])
+  const [yearLevels] = useState([
+    '1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year', '6th Year'
+  ])
+  
+  // Enhanced statistics states
+  const [filteredStats, setFilteredStats] = useState<{
+    totalStudents: number
+    byCourse: Array<{
+      course_name: string
+      short: string
+      student_count: number
+      yearLevels: Array<{
+        year_level: string
+        count: number
+      }>
+    }>
+    byYearLevel: Array<{
+      year_level: string
+      count: number
+      courses: Array<{
+        course_name: string
+        short: string
+        count: number
+      }>
+    }>
+  } | null>(null)
+  const [filteredStatsLoading, setFilteredStatsLoading] = useState(false)
 
   useEffect(() => {
     const checkSession = async () => {
@@ -163,8 +199,16 @@ export default function AdminDashboardPage() {
       fetchEvents()
       fetchStudentCount()
       fetchCourseStats()
+      fetchCourses()
+      fetchFilteredStats()
     }
   }, [activeTab])
+  
+  useEffect(() => {
+    if (activeTab === 'stats') {
+      fetchFilteredStats()
+    }
+  }, [selectedCourseFilter, selectedYearFilter])
 
 
 
@@ -302,6 +346,151 @@ export default function AdminDashboardPage() {
       setCourseStats(null)
     } finally {
       setCourseStatsLoading(false)
+    }
+  }
+
+  const fetchCourses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, course_name, short')
+        .order('course_name')
+
+      if (error) {
+        console.error('Error fetching courses:', error)
+        setCourses([])
+      } else {
+        setCourses(data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching courses:', error)
+      setCourses([])
+    }
+  }
+
+  const fetchFilteredStats = async () => {
+    setFilteredStatsLoading(true)
+    try {
+      // Build query based on filters
+      let query = supabase
+        .from('user_profiles')
+        .select(`
+          id,
+          course_id,
+          year_level,
+          courses!inner(
+            course_name,
+            short
+          )
+        `)
+        .eq('role_id', 1) // Only students
+
+      // Apply course filter
+      if (selectedCourseFilter !== 'all') {
+        query = query.eq('course_id', selectedCourseFilter)
+      }
+
+      // Apply year level filter
+      if (selectedYearFilter !== 'all') {
+        query = query.eq('year_level', selectedYearFilter)
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error('Error fetching filtered statistics:', error)
+        setFilteredStats(null)
+        return
+      }
+
+      // Process data to create comprehensive statistics
+      const totalStudents = data?.length || 0
+
+      // Group by course
+      const courseMap = new Map<string, {
+        course_name: string
+        short: string
+        student_count: number
+        yearLevels: Map<string, number>
+      }>()
+
+      // Group by year level
+      const yearMap = new Map<string, {
+        year_level: string
+        count: number
+        courses: Map<string, number>
+      }>()
+
+      data?.forEach((profile) => {
+        const course = profile.courses as any
+        const courseKey = profile.course_id.toString()
+        const yearKey = profile.year_level
+
+        // Process course grouping
+        if (course && course.course_name && course.short) {
+          if (!courseMap.has(courseKey)) {
+            courseMap.set(courseKey, {
+              course_name: course.course_name,
+              short: course.short,
+              student_count: 0,
+              yearLevels: new Map()
+            })
+          }
+          const courseData = courseMap.get(courseKey)!
+          courseData.student_count++
+          
+          // Count by year level within course
+          courseData.yearLevels.set(yearKey, (courseData.yearLevels.get(yearKey) || 0) + 1)
+        }
+
+        // Process year level grouping
+        if (!yearMap.has(yearKey)) {
+          yearMap.set(yearKey, {
+            year_level: yearKey,
+            count: 0,
+            courses: new Map()
+          })
+        }
+        const yearData = yearMap.get(yearKey)!
+        yearData.count++
+        
+        // Count by course within year level
+        if (course && course.course_name) {
+          yearData.courses.set(course.course_name, (yearData.courses.get(course.course_name) || 0) + 1)
+        }
+      })
+
+      // Convert maps to arrays
+      const byCourse = Array.from(courseMap.values()).map(course => ({
+        course_name: course.course_name,
+        short: course.short,
+        student_count: course.student_count,
+        yearLevels: Array.from(course.yearLevels.entries()).map(([year_level, count]) => ({
+          year_level,
+          count
+        })).sort((a, b) => a.year_level.localeCompare(b.year_level))
+      })).sort((a, b) => b.student_count - a.student_count)
+
+      const byYearLevel = Array.from(yearMap.values()).map(year => ({
+        year_level: year.year_level,
+        count: year.count,
+        courses: Array.from(year.courses.entries()).map(([course_name, count]) => ({
+          course_name,
+          short: courses.find(c => c.course_name === course_name)?.short || course_name,
+          count
+        })).sort((a, b) => b.count - a.count)
+      })).sort((a, b) => a.year_level.localeCompare(b.year_level))
+
+      setFilteredStats({
+        totalStudents,
+        byCourse,
+        byYearLevel
+      })
+    } catch (error) {
+      console.error('Error fetching filtered statistics:', error)
+      setFilteredStats(null)
+    } finally {
+      setFilteredStatsLoading(false)
     }
   }
 
@@ -1415,145 +1604,205 @@ export default function AdminDashboardPage() {
              <div className="space-y-6">
                {/* Header */}
                <div className="flex items-center justify-between">
-                 <h2 className="text-2xl font-semibold text-gray-900">Event Statistics</h2>
+                 <h2 className="text-2xl font-semibold text-gray-900">Student Statistics</h2>
                </div>
                
-               {/* Event Selection */}
+               {/* Filter Controls */}
                <div className="bg-white rounded-lg shadow-lg p-6">
-                 <div className="mb-6">
-                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                     <Calendar className="w-4 h-4 inline mr-1" />
-                     Select Event
-                   </label>
-                   <select
-                     value={selectedStatsEvent || ''}
-                     onChange={(e) => {
-                       const eventId = Number(e.target.value) || null
-                       setSelectedStatsEvent(eventId)
-                       if (eventId) {
-                         fetchAttendanceStats(eventId)
-                       } else {
-                         setStatsData(null)
-                       }
-                     }}
-                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                   >
-                     <option value="">Choose an event to view statistics...</option>
-                     {events.map((event) => (
-                       <option key={event.id} value={event.id}>
-                         {event.name} - {new Date(event.start_datetime).toLocaleDateString()}
-                       </option>
-                     ))}
-                   </select>
-                       </div>
-
-                                   {/* Statistics Display */}
-                  {/* Overall Statistics & Course Breakdown */}
-                  <div className="mb-8">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                      <Users className="w-5 h-5 mr-2 text-orange-600" />
-                      Student Statistics
-                    </h3>
-                    {studentCountLoading || courseStatsLoading ? (
-                      <div className="text-center py-6">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600 mx-auto"></div>
-                        <p className="text-gray-600 mt-2 text-sm">Loading statistics...</p>
-                      </div>
-                    ) : (
-                      <div className="bg-white border border-gray-200 rounded-lg p-6">
-                        {/* Total Students */}
-                        <div className="text-center mb-6 pb-6 border-b border-gray-100">
-                          <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Users className="w-8 h-8 text-orange-600" />
-                          </div>
-                          <h4 className="text-lg font-semibold text-gray-900 mb-2">Total Students</h4>
-                          <p className="text-3xl font-bold text-orange-600">{studentCount || 0}</p>
-                          <p className="text-sm text-gray-600 mt-1">registered students</p>
-                        </div>
-
-                        {/* Course Breakdown */}
-                        {courseStats && courseStats.length > 0 ? (
-                          <div>
-                            <h5 className="text-sm font-medium text-gray-700 mb-4 text-center">By Course</h5>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                              {courseStats.map((course, index) => (
-                                <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
-                                  <h6 className="text-sm font-semibold text-gray-900 mb-1">{course.short}</h6>
-                                  <p className="text-lg font-bold text-orange-600">{course.student_count}</p>
-                                  <p className="text-xs text-gray-500">students</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-center py-4">
-                            <p className="text-sm text-gray-500">No course data available</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                     {/* Event Statistics Section */}
-                     {selectedStatsEvent && (
-                       <div className="space-y-4">
-                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                           <Calendar className="w-5 h-5 mr-2 text-orange-600" />
-                           Event Statistics
-                         </h3>
-                         {statsLoading ? (
-                           <div className="text-center py-8">
-                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto"></div>
-                             <p className="text-gray-600 mt-2 text-sm">Loading statistics...</p>
-                           </div>
-                         ) : statsData ? (
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                             {/* Time In Count */}
-                             <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-                               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                 <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                 </svg>
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                   {/* Course Filter */}
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                       <BookOpen className="w-4 h-4 inline mr-1" />
+                       Filter by Course
+                     </label>
+                     <select
+                       value={selectedCourseFilter}
+                       onChange={(e) => setSelectedCourseFilter(e.target.value)}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                     >
+                       <option value="all">All Courses</option>
+                       {courses.map((course) => (
+                         <option key={course.id} value={course.id}>
+                           {course.course_name} ({course.short})
+                         </option>
+                       ))}
+                     </select>
                    </div>
-                               <h3 className="text-lg font-semibold text-green-900 mb-2">Time In</h3>
-                               <p className="text-3xl font-bold text-green-600">{statsData.timeInCount}</p>
-                               <p className="text-sm text-green-700 mt-1">students</p>
-                </div>
 
-                             {/* Time Out Count */}
-                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-                               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                 <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                 </svg>
-              </div>
-                               <h3 className="text-lg font-semibold text-blue-900 mb-2">Time Out</h3>
-                               <p className="text-3xl font-bold text-blue-600">{statsData.timeOutCount}</p>
-                               <p className="text-sm text-blue-700 mt-1">students</p>
-                             </div>
-                           </div>
-                         ) : (
-                           <div className="text-center py-8">
-                             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                               <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                               </svg>
-                             </div>
-                             <h3 className="text-lg font-medium text-gray-900 mb-2">No Data Available</h3>
-                             <p className="text-gray-600 text-sm">Select an event to view attendance statistics</p>
-                           </div>
-                         )}
-            </div>
-          )}
+                   {/* Year Level Filter */}
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                       <Users className="w-4 h-4 inline mr-1" />
+                       Filter by Year Level
+                     </label>
+                     <select
+                       value={selectedYearFilter}
+                       onChange={(e) => setSelectedYearFilter(e.target.value)}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                     >
+                       <option value="all">All Year Levels</option>
+                       {yearLevels.map((year) => (
+                         <option key={year} value={year}>
+                           {year}
+                         </option>
+                       ))}
+                     </select>
+                   </div>
 
-                 {/* Instructions */}
-                 {!selectedStatsEvent && (
-                   <div className="text-center py-8">
-                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                       <Calendar className="w-8 h-8 text-gray-400" />
+                   {/* Event Selection */}
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                       <Calendar className="w-4 h-4 inline mr-1" />
+                       Event Statistics
+                     </label>
+                     <select
+                       value={selectedStatsEvent || ''}
+                       onChange={(e) => {
+                         const eventId = Number(e.target.value) || null
+                         setSelectedStatsEvent(eventId)
+                         if (eventId) {
+                           fetchAttendanceStats(eventId)
+                         } else {
+                           setStatsData(null)
+                         }
+                       }}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                     >
+                       <option value="">Choose an event...</option>
+                       {events.map((event) => (
+                         <option key={event.id} value={event.id}>
+                           {event.name} - {new Date(event.start_datetime).toLocaleDateString()}
+                         </option>
+                       ))}
+                     </select>
+                   </div>
+                 </div>
+
+                 {/* Enhanced Statistics Display */}
+                 {filteredStatsLoading ? (
+                   <div className="text-center py-12">
+                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto"></div>
+                     <p className="text-gray-600 mt-4 text-sm">Loading statistics...</p>
+                   </div>
+                 ) : filteredStats ? (
+                   <div className="space-y-8">
+                     {/* Total Students Summary */}
+                     <div className="text-center bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-6">
+                       <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                         <Users className="w-10 h-10 text-orange-600" />
+                       </div>
+                       <h3 className="text-2xl font-bold text-gray-900 mb-2">Total Students</h3>
+                       <p className="text-4xl font-bold text-orange-600">{filteredStats.totalStudents}</p>
+                       <p className="text-sm text-gray-600 mt-2">
+                         {selectedCourseFilter !== 'all' && `Filtered by course`}
+                         {selectedYearFilter !== 'all' && `Filtered by year level`}
+                         {selectedCourseFilter === 'all' && selectedYearFilter === 'all' && 'All registered students'}
+                       </p>
                      </div>
-                     <h3 className="text-lg font-medium text-gray-900 mb-2">Select an Event</h3>
-                     <p className="text-gray-600 text-sm">Choose an event from the dropdown above to view attendance statistics</p>
+
+                     {/* Statistics by Course */}
+                     <div>
+                       <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                         <BookOpen className="w-6 h-6 mr-2 text-orange-600" />
+                         Statistics by Course
+                       </h3>
+                       {filteredStats.byCourse.length > 0 ? (
+                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                           {filteredStats.byCourse.map((course, index) => (
+                             <div key={index} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                               <div className="text-center mb-4">
+                                 <h4 className="text-lg font-semibold text-gray-900 mb-1">{course.course_name}</h4>
+                                 <p className="text-sm text-gray-500 mb-3">({course.short})</p>
+                                 <div className="text-3xl font-bold text-orange-600">{course.student_count}</div>
+                                 <p className="text-sm text-gray-600">students</p>
+                               </div>
+                               
+                               {/* Year Level Breakdown */}
+                               {course.yearLevels.length > 0 && (
+                                 <div className="border-t border-gray-100 pt-4">
+                                   <h5 className="text-sm font-medium text-gray-700 mb-3 text-center">By Year Level</h5>
+                                   <div className="grid grid-cols-2 gap-2">
+                                     {course.yearLevels.map((year, yearIndex) => (
+                                       <div key={yearIndex} className="text-center">
+                                         <p className="text-xs text-gray-500">{year.year_level}</p>
+                                         <p className="text-sm font-semibold text-gray-900">{year.count}</p>
+                                       </div>
+                                     ))}
+                                   </div>
+                                 </div>
+                               )}
+                             </div>
+                           ))}
+                         </div>
+                       ) : (
+                         <div className="text-center py-8">
+                           <p className="text-gray-500">No course data available for the selected filters</p>
+                         </div>
+                       )}
+                     </div>
+
+                     
+                   </div>
+                 ) : (
+                   <div className="text-center py-12">
+                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                       <Users className="w-8 h-8 text-gray-400" />
+                     </div>
+                     <h3 className="text-lg font-medium text-gray-900 mb-2">No Data Available</h3>
+                     <p className="text-gray-600 text-sm">No student data found for the selected filters</p>
+                   </div>
+                 )}
+
+                 {/* Event Statistics Section */}
+                 {selectedStatsEvent && (
+                   <div className="mt-8 pt-8 border-t border-gray-200">
+                     <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                       <Calendar className="w-6 h-6 mr-2 text-orange-600" />
+                       Event Attendance Statistics
+                     </h3>
+                     {statsLoading ? (
+                       <div className="text-center py-8">
+                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto"></div>
+                         <p className="text-gray-600 mt-2 text-sm">Loading event statistics...</p>
+                       </div>
+                     ) : statsData ? (
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         {/* Time In Count */}
+                         <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                             <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                             </svg>
+                           </div>
+                           <h3 className="text-lg font-semibold text-green-900 mb-2">Time In</h3>
+                           <p className="text-3xl font-bold text-green-600">{statsData.timeInCount}</p>
+                           <p className="text-sm text-green-700 mt-1">students</p>
+                         </div>
+
+                         {/* Time Out Count */}
+                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                             <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                             </svg>
+                           </div>
+                           <h3 className="text-lg font-semibold text-blue-900 mb-2">Time Out</h3>
+                           <p className="text-3xl font-bold text-blue-600">{statsData.timeOutCount}</p>
+                           <p className="text-sm text-blue-700 mt-1">students</p>
+                         </div>
+                       </div>
+                     ) : (
+                       <div className="text-center py-8">
+                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                           <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                           </svg>
+                         </div>
+                         <h3 className="text-lg font-medium text-gray-900 mb-2">No Event Data Available</h3>
+                         <p className="text-gray-600 text-sm">Select an event to view attendance statistics</p>
+                       </div>
+                     )}
                    </div>
                  )}
                </div>
