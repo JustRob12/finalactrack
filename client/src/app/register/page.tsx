@@ -547,14 +547,8 @@ export default function RegisterPage() {
               </h2>
               
               <p className="text-gray-600 mb-6">
-                Your account has been created successfully. Please check your email and click the confirmation link to verify your account.
+                Your account has been created successfully! You can now sign in to your account.
               </p>
-
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-orange-800">
-                  <strong>Important:</strong> You must confirm your email address before you can sign in to your account.
-                </p>
-              </div>
 
               <button
                 onClick={handleCloseModal}

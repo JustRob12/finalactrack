@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
-  signUp: (email: string, password: string, userData: Record<string, any>) => Promise<{ error: Error | null; data?: { user: User | null; session: Session | null } }>
+  signUp: (email: string, password: string, userData: Record<string, any>) => Promise<{ error: Error | null; data?: { user: User | null; session: Session | null } | null }>
   signOut: () => Promise<void>
   refreshSession: () => Promise<boolean>
   checkAndRefreshSession: () => Promise<boolean>
@@ -132,14 +132,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, userData: Record<string, any>) => {
-    const { error, data } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: userData,
-      },
-    })
-    return { error, data }
+    try {
+      // Sign up without email confirmation
+      const { error, data } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: userData,
+          emailRedirectTo: `https://finalacetrack.vercel.app/login`,
+        },
+      })
+
+      return { error, data }
+    } catch (error) {
+      return { error: error as Error, data: null }
+    }
   }
 
   const signOut = async () => {
@@ -234,9 +241,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Rate limiting for email requests (for password reset only)
+  const emailRequestTimes = new Map<string, number>()
+  const EMAIL_RATE_LIMIT_MS = 60000 // 60 seconds between requests
+
   // Function to send forgot password email
   const forgotPassword = async (email: string) => {
     try {
+      // Check rate limiting
+      const now = Date.now()
+      const lastRequestTime = emailRequestTimes.get(email)
+      
+      if (lastRequestTime && (now - lastRequestTime) < EMAIL_RATE_LIMIT_MS) {
+        const remainingTime = Math.ceil((EMAIL_RATE_LIMIT_MS - (now - lastRequestTime)) / 1000)
+        return { 
+          error: new Error(`Please wait ${remainingTime} seconds before requesting another email.`) 
+        }
+      }
+
       // First check if the email exists in the user_profiles table
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
@@ -256,11 +278,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Email exists, send the reset password email
+      // Send password reset email
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `https://finalacetrack.vercel.app/reset-password`,
       })
-      return { error }
+
+      if (error) {
+        return { error }
+      }
+
+      if (!error) {
+        // Update rate limiting timestamp
+        emailRequestTimes.set(email, now)
+      }
+
+      return { error: null }
     } catch (error) {
       // If any error occurs during the check, fall back to the original behavior
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
