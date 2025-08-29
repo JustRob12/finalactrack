@@ -1045,6 +1045,25 @@ export default function AdminDashboardPage() {
     try {
       setScannerLoading(true)
       
+      // First, fetch the student's profile to get their actual course_id
+      const { data: studentProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('course_id')
+        .eq('student_id', scannedData.student_id)
+        .eq('role_id', 1)
+        .maybeSingle()
+
+      if (profileError) {
+        console.error('Error fetching student profile:', profileError)
+        setScannerError('Error fetching student profile')
+        return
+      }
+
+      if (!studentProfile) {
+        setScannerError('Student profile not found')
+        return
+      }
+      
       // Check if attendance already exists
       const { data: existingAttendance, error: checkError } = await supabase
         .from('attendance')
@@ -1094,7 +1113,7 @@ export default function AdminDashboardPage() {
             firstname: scannedData.first_name,
             middlename: scannedData.middle_initial,
             lastname: scannedData.last_name,
-            course_id: 1, // You might want to get this from the user profile
+            course_id: studentProfile.course_id, // Use the actual course_id from student profile
             avatar: scannedData.avatar,
             time_in: scanType === 'time_in' ? getPhilippineTime() : null,
             time_out: scanType === 'time_out' ? getPhilippineTime() : null,

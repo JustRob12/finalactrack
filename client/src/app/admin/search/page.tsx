@@ -385,24 +385,47 @@ export default function SearchStudentPage() {
                        <span className="ml-2 text-sm text-gray-600">Loading attendance...</span>
                      </div>
                    ) : attendanceStatus.length > 0 ? (
-                     <div className="space-y-2">
+                     <div className="space-y-3">
                        {attendanceStatus.map((status) => (
-                         <div key={status.event_id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                           <div className="flex items-center space-x-2">
-                             {status.isPresent ? (
-                               <CheckCircle className="w-4 h-4 text-green-600" />
-                             ) : (
-                               <XCircle className="w-4 h-4 text-red-600" />
-                             )}
-                             <span className="text-sm text-gray-700">{status.event_name}</span>
+                         <div key={status.event_id} className="bg-gray-50 rounded-lg p-3">
+                           <div className="flex items-center justify-between mb-2">
+                             <div className="flex items-center space-x-2">
+                               {status.isPresent ? (
+                                 <CheckCircle className="w-4 h-4 text-green-600" />
+                               ) : (
+                                 <XCircle className="w-4 h-4 text-red-600" />
+                               )}
+                               <span className="text-sm font-medium text-gray-700">{status.event_name}</span>
+                             </div>
+                             <div className="flex items-center space-x-1">
+                               {status.isPresent ? (
+                                 <span className="text-xs text-green-600 font-medium bg-green-100 px-2 py-1 rounded">Present</span>
+                               ) : (
+                                 <span className="text-xs text-red-600 font-medium bg-red-100 px-2 py-1 rounded">Absent</span>
+                               )}
+                             </div>
                            </div>
-                           <div className="flex items-center space-x-1">
-                             {status.isPresent ? (
-                               <span className="text-xs text-green-600 font-medium">Present</span>
-                             ) : (
-                               <span className="text-xs text-red-600 font-medium">Absent</span>
-                             )}
-                           </div>
+                           
+                           {status.isPresent && (
+                             <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                               <div className="flex items-center space-x-1">
+                                 <span className="font-medium">Time In:</span>
+                                 <span>{status.time_in ? new Date(status.time_in).toLocaleTimeString('en-US', { 
+                                   hour: '2-digit', 
+                                   minute: '2-digit',
+                                   hour12: true 
+                                 }) : 'Not recorded'}</span>
+                               </div>
+                               <div className="flex items-center space-x-1">
+                                 <span className="font-medium">Time Out:</span>
+                                 <span>{status.time_out ? new Date(status.time_out).toLocaleTimeString('en-US', { 
+                                   hour: '2-digit', 
+                                   minute: '2-digit',
+                                   hour12: true 
+                                 }) : 'Not recorded'}</span>
+                               </div>
+                             </div>
+                           )}
                          </div>
                        ))}
                      </div>
