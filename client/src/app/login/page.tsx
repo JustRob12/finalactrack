@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import Image from 'next/image'
 
 export default function LoginPage() {
@@ -67,6 +67,15 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white flex items-center justify-center p-4">
+      {/* Back to Home Button */}
+      <button
+        onClick={() => router.push('/')}
+        className="absolute top-6 left-6 flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        <span className="text-sm font-medium">Back to Home</span>
+      </button>
+
       <div className="w-full max-w-md">
         {/* Logo and Welcome */}
         <div className="text-center mb-8">

@@ -144,8 +144,8 @@ export default function HomePage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <Image
-                src="/images/acetrack-font.png"
-                alt="Acetrack Logo"
+                src="/images/aces-logo.png"
+                alt="ACES Logo"
                 width={120}
                 height={40}
                 className="h-10 w-auto"
@@ -242,7 +242,7 @@ export default function HomePage() {
                   <h4 className="text-lg font-semibold text-gray-900 mb-1">
                     {studentInfo.first_name} {studentInfo.middle_initial} {studentInfo.last_name}
                   </h4>
-                  <p className="text-sm text-gray-600">Student ID: {studentSearchQuery}</p>
+            
                 </div>
                 <h4 className="text-md font-medium text-gray-900 mb-3">Attendance Records</h4>
                 <div className="space-y-3">
@@ -510,7 +510,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 ACETRACK. All rights reserved. | Developed by ACES</p>
+            <p>&copy; 2025 ACETRACK. All rights reserved. | Developed by Roberto Prisoris</p>
           </div>
         </div>
       </footer>
