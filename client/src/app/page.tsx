@@ -811,7 +811,7 @@ export default function HomePage() {
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <div className="w-5 h-5 flex items-center justify-center">
+                  {/* <div className="w-5 h-5 flex items-center justify-center">
                     <div className={`w-3 h-3 rounded-full ${selectedEvent.status === 1 ? 'bg-green-500' : 'bg-gray-400'}`}></div>
                   </div>
                   <div>
@@ -819,7 +819,7 @@ export default function HomePage() {
                     <p className={`font-medium ${selectedEvent.status === 1 ? 'text-green-600' : 'text-gray-600'}`}>
                       {selectedEvent.status === 1 ? 'Active' : 'Inactive'}
                     </p>
-                  </div>
+                  </div> */}
                 </div>
               </div>
 
