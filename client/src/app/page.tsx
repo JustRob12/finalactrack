@@ -46,6 +46,7 @@ export default function HomePage() {
   const [eventsLoading, setEventsLoading] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [showEventModal, setShowEventModal] = useState(false)
+  const [audio] = useState(typeof window !== 'undefined' ? new Audio('/audio/arayko.mp3') : null)
 
   useEffect(() => {
     if (!loading) {
@@ -150,6 +151,11 @@ export default function HomePage() {
       })
       setStudentAttendance(attendanceRecords)
       setShowStudentSearch(true)
+      
+      // Play audio if no attendance records found
+      if (attendanceRecords.length === 0) {
+        playNoAttendanceAudio()
+      }
     } catch (error) {
       console.error('Error searching for student:', error)
       setStudentSearchError('An unexpected error occurred. Please try again.')
@@ -216,6 +222,15 @@ export default function HomePage() {
   const closeEventModal = () => {
     setShowEventModal(false)
     setSelectedEvent(null)
+  }
+
+  const playNoAttendanceAudio = () => {
+    if (audio) {
+      audio.currentTime = 0
+      audio.play().catch(error => {
+        console.log('Audio playback failed:', error)
+      })
+    }
   }
 
   if (loading) {
