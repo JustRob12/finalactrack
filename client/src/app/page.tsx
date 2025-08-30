@@ -20,6 +20,17 @@ interface StudentInfo {
   last_name: string
 }
 
+interface Event {
+  id: number
+  location: string
+  name: string
+  description: string | null
+  banner: string | null
+  status: number
+  start_datetime: string
+  end_datetime: string
+}
+
 export default function HomePage() {
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -30,6 +41,11 @@ export default function HomePage() {
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null)
   const [studentSearchError, setStudentSearchError] = useState<string | null>(null)
   const [showStudentSearch, setShowStudentSearch] = useState(false)
+  const [events, setEvents] = useState<Event[]>([])
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [eventsLoading, setEventsLoading] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [showEventModal, setShowEventModal] = useState(false)
 
   useEffect(() => {
     if (!loading) {
@@ -40,6 +56,33 @@ export default function HomePage() {
       }
     }
   }, [user, loading, router])
+
+  useEffect(() => {
+    fetchEvents()
+  }, [])
+
+  const fetchEvents = async () => {
+    setEventsLoading(true)
+    try {
+      console.log('Fetching all events from Supabase...')
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .order('start_datetime', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching events:', error)
+        console.error('Error details:', error.message)
+      } else {
+        console.log('Events fetched successfully:', data)
+        setEvents(data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error)
+    } finally {
+      setEventsLoading(false)
+    }
+  }
 
   const handleStudentSearch = async () => {
     if (!studentSearchQuery.trim()) {
@@ -122,6 +165,59 @@ export default function HomePage() {
     }
   }
 
+  // Calendar helper functions
+  const getDaysInMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+  }
+
+  const getFirstDayOfMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay()
+  }
+
+  const formatDate = (date: Date) => {
+    // Use local date formatting to avoid timezone issues
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const hasEventOnDate = (date: Date) => {
+    const dateStr = formatDate(date)
+    return events.some(event => {
+      // Parse the event date string directly to avoid timezone conversion
+      const eventDateStr = event.start_datetime.split('T')[0]
+      return eventDateStr === dateStr
+    })
+  }
+
+  const getEventOnDate = (date: Date) => {
+    const dateStr = formatDate(date)
+    return events.find(event => {
+      // Parse the event date string directly to avoid timezone conversion
+      const eventDateStr = event.start_datetime.split('T')[0]
+      return eventDateStr === dateStr
+    })
+  }
+
+  const previousMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
+  }
+
+  const nextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
+  }
+
+  const handleEventClick = (event: Event) => {
+    setSelectedEvent(event)
+    setShowEventModal(true)
+  }
+
+  const closeEventModal = () => {
+    setShowEventModal(false)
+    setSelectedEvent(null)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white flex items-center justify-center">
@@ -193,94 +289,221 @@ export default function HomePage() {
             Track student attendance efficiently and accurately.
           </p>
           
-          {/* Student Search Section */}
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-8 max-w-2xl mx-auto">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Check Your Attendance</h3>
-            <p className="text-sm text-gray-600 mb-4 text-center">
-              <strong>Note:</strong> This search is only available for registered students who use QR code for attendance tracking.
-            </p>
-            <div className="flex space-x-3">
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={studentSearchQuery}
-                  onChange={(e) => setStudentSearchQuery(e.target.value)}
-                  onKeyPress={handleStudentKeyPress}
-                  placeholder="Enter your Student"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-              </div>
-              <button
-                onClick={handleStudentSearch}
-                disabled={searchingStudent}
-                className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-              >
-                {searchingStudent ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Searching...</span>
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-4 h-4" />
-                    <span>Search</span>
-                  </>
+          {/* Student Search and Calendar Section */}
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-8 max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left Column - Student Search */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Check Your Attendance</h3>
+                <p className="text-sm text-gray-600 mb-6 text-center">
+                  <strong>Note:</strong> This search is only available for registered students who use QR code for attendance tracking.
+                </p>
+                
+                <div className="flex space-x-3 mb-4">
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={studentSearchQuery}
+                      onChange={(e) => setStudentSearchQuery(e.target.value)}
+                      onKeyPress={handleStudentKeyPress}
+                      placeholder="Student ID"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    />
+                  </div>
+                  <button
+                    onClick={handleStudentSearch}
+                    disabled={searchingStudent}
+                    className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {searchingStudent ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Searching...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Search className="w-4 h-4" />
+                        <span>Search</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {studentSearchError && (
+                  <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-700 text-sm">{studentSearchError}</p>
+                  </div>
                 )}
-              </button>
-            </div>
 
-            {studentSearchError && (
-              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-sm">{studentSearchError}</p>
-              </div>
-            )}
-
-            {/* Student Attendance Results */}
-            {showStudentSearch && studentAttendance.length > 0 && studentInfo && (
-              <div className="mt-6">
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-1">
-                    {studentInfo.first_name} {studentInfo.middle_initial} {studentInfo.last_name}
-                  </h4>
-            
-                </div>
-                <h4 className="text-md font-medium text-gray-900 mb-3">Attendance Records</h4>
-                <div className="space-y-3">
-                  {studentAttendance.map((record) => (
-                    <div key={record.event_id} className="bg-gray-50 rounded-lg p-3">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-gray-700">{record.event_name}</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
-                        <div className="flex items-center space-x-1">
-                          <span className="font-medium">Time In:</span>
-                          <span>{record.time_in ? new Date(record.time_in).toLocaleTimeString('en-US', { 
-                            hour: '2-digit', 
-                            minute: '2-digit',
-                            hour12: true 
-                          }) : 'Not recorded'}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <span className="font-medium">Time Out:</span>
-                          <span>{record.time_out ? new Date(record.time_out).toLocaleTimeString('en-US', { 
-                            hour: '2-digit', 
-                            minute: '2-digit',
-                            hour12: true 
-                          }) : 'Not recorded'}</span>
-                        </div>
-                      </div>
+                {/* Student Attendance Results */}
+                {showStudentSearch && studentAttendance.length > 0 && studentInfo && (
+                  <div>
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-1">
+                        {studentInfo.first_name} {studentInfo.middle_initial} {studentInfo.last_name}
+                      </h4>
                     </div>
-                  ))}
+                    <h4 className="text-md font-medium text-gray-900 mb-3">Attendance Records</h4>
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {studentAttendance.map((record) => (
+                        <div key={record.event_id} className="bg-gray-50 rounded-lg p-3">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-medium text-gray-700">{record.event_name}</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                            <div className="flex items-center space-x-1">
+                              <span className="font-medium">Time In:</span>
+                              <span>{record.time_in ? new Date(record.time_in).toLocaleTimeString('en-US', { 
+                                hour: '2-digit', 
+                                minute: '2-digit',
+                                hour12: true 
+                              }) : 'Not recorded'}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <span className="font-medium">Time Out:</span>
+                              <span>{record.time_out ? new Date(record.time_out).toLocaleTimeString('en-US', { 
+                                hour: '2-digit', 
+                                minute: '2-digit',
+                                hour12: true 
+                              }) : 'Not recorded'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {showStudentSearch && studentAttendance.length === 0 && !studentSearchError && !searchingStudent && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-blue-700 text-sm text-center">No attendance records found for this Student ID.</p>
+                  </div>
+                )}
+              </div>
+
+                             {/* Right Column - Calendar */}
+               <div>
+                 <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Calendar of Events</h3>
+                                   <p className="text-sm text-gray-600 mb-6 text-center">
+                    View all events and their scheduled dates. Event days are highlighted in orange.
+                  </p>
+                 
+                 {eventsLoading && (
+                   <div className="text-center py-4">
+                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-2"></div>
+                     <p className="text-sm text-gray-600">Loading events...</p>
+                   </div>
+                 )}
+                 
+                 {!eventsLoading && events.length === 0 && (
+                   <div className="text-center py-4">
+                     <p className="text-sm text-gray-600">No events found for this month.</p>
+                   </div>
+                 )}
+                 
+                 {!eventsLoading && events.length > 0 && (
+                   <div className="text-center mb-4">
+                     <p className="text-sm text-gray-600">
+                       {events.length} event{events.length !== 1 ? 's' : ''} found
+                     </p>
+                   </div>
+                 )}
+                
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <button
+                      onClick={previousMonth}
+                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <h4 className="text-lg font-semibold text-gray-900">
+                      {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </h4>
+                    <button
+                      onClick={nextMonth}
+                      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Calendar Grid */}
+                  <div className="grid grid-cols-7 gap-1 mb-2">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                      <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: getFirstDayOfMonth(currentDate) }, (_, i) => (
+                      <div key={`empty-${i}`} className="h-10"></div>
+                    ))}
+                    
+                    {Array.from({ length: getDaysInMonth(currentDate) }, (_, i) => {
+                      const day = i + 1
+                      const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
+                      const hasEvent = hasEventOnDate(date)
+                      const event = hasEvent ? getEventOnDate(date) : null
+                      
+                      // Check if this is today's date
+                      const today = new Date()
+                      const isToday = date.getDate() === today.getDate() && 
+                                    date.getMonth() === today.getMonth() && 
+                                    date.getFullYear() === today.getFullYear()
+                      
+                      return (
+                        <div
+                          key={day}
+                          className={`h-10 flex items-center justify-center text-sm rounded-lg cursor-pointer transition-colors relative ${
+                            hasEvent 
+                              ? isToday
+                                ? 'bg-orange-600 text-white hover:bg-orange-700 border-2 border-orange-300'
+                                : 'bg-orange-500 text-white hover:bg-orange-600'
+                              : isToday
+                                ? 'bg-orange-100 text-orange-800 hover:bg-orange-200 border-2 border-orange-300'
+                                : 'hover:bg-gray-200'
+                          }`}
+                          title={event ? `Click to view ${event.name}` : isToday ? 'Today' : ''}
+                          onClick={() => {
+                            if (event) {
+                              handleEventClick(event)
+                            }
+                          }}
+                        >
+                          <span className="relative">
+                            {day}
+                            {isToday && (
+                              <span className="absolute -top-2 -right-2 text-xs font-bold text-orange-600 bg-white rounded-full px-1">
+                                TODAY
+                              </span>
+                            )}
+                          </span>
+                          {hasEvent && !isToday && (
+                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Event Legend */}
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <div className="w-3 h-3 bg-orange-500 rounded"></div>
+                      <span>Event Day</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
-
-            {showStudentSearch && studentAttendance.length === 0 && !studentSearchError && !searchingStudent && (
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-blue-700 text-sm text-center">No attendance records found for this Student ID.</p>
-              </div>
-            )}
+            </div>
           </div>
 
           {showLoginButton && (
@@ -417,12 +640,12 @@ export default function HomePage() {
               Have questions about our attendance system or need support? 
               We're here to help you get the most out of ACETRACK.
             </p>
-            <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="flex flex-col items-center space-y-3">
                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
                   <Mail className="w-8 h-8 text-orange-500" />
                 </div>
-                <div>
+                <div className="text-center">
                   <h4 className="font-semibold text-gray-900 text-lg">Email</h4>
                   <p className="text-gray-600">acetrack2025@gmail.com</p>
                 </div>
@@ -431,7 +654,7 @@ export default function HomePage() {
                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
                   <Phone className="w-8 h-8 text-orange-500" />
                 </div>
-                <div>
+                <div className="text-center">
                   <h4 className="font-semibold text-gray-900 text-lg">Phone</h4>
                   <p className="text-gray-600">09363288483 - PIO</p>
                 </div>
@@ -440,7 +663,7 @@ export default function HomePage() {
                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
                   <MapPin className="w-8 h-8 text-orange-500" />
                 </div>
-                <div>
+                <div className="text-center">
                   <h4 className="font-semibold text-gray-900 text-lg">Address</h4>
                   <p className="text-gray-600">Engineering Extension Building<br />DOrSU Main Campus</p>
                 </div>
@@ -487,7 +710,7 @@ export default function HomePage() {
             <div>
               <h4 className="font-semibold mb-4">Connect</h4>
               <div className="flex space-x-4">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <a href="https://www.facebook.com/dorsu.aces" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
                   <span className="sr-only">Facebook</span>
                     
                   <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
@@ -514,6 +737,113 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      {/* Event Details Modal */}
+      {showEventModal && selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-900">Event Details</h3>
+              <button
+                onClick={closeEventModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              {/* Event Banner */}
+              {selectedEvent.banner && (
+                <div className="mb-6">
+                  <img
+                    src={selectedEvent.banner}
+                    alt={selectedEvent.name}
+                    className="w-full h-48 object-cover rounded-lg"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Event Name */}
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">{selectedEvent.name}</h2>
+
+              {/* Event Details Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="flex items-center space-x-3">
+                  <MapPin className="w-5 h-5 text-orange-500" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Location</p>
+                    <p className="text-gray-900">{selectedEvent.location}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <Clock className="w-5 h-5 text-orange-500" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Date & Time</p>
+                    <p className="text-gray-900">
+                      {new Date(selectedEvent.start_datetime).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {new Date(selectedEvent.start_datetime).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      })} - {new Date(selectedEvent.end_datetime).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <div className="w-5 h-5 flex items-center justify-center">
+                    <div className={`w-3 h-3 rounded-full ${selectedEvent.status === 1 ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Status</p>
+                    <p className={`font-medium ${selectedEvent.status === 1 ? 'text-green-600' : 'text-gray-600'}`}>
+                      {selectedEvent.status === 1 ? 'Active' : 'Inactive'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Description */}
+              {selectedEvent.description && (
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">Description</h4>
+                  <p className="text-gray-700 leading-relaxed">{selectedEvent.description}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end p-6 border-t border-gray-200">
+              <button
+                onClick={closeEventModal}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
