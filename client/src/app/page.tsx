@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { GraduationCap, Mail, Phone, MapPin, Clock, Users, Shield, BarChart3, Search, CheckCircle, XCircle } from 'lucide-react'
+import { GraduationCap, Mail, Phone, MapPin, Clock, Users, Shield, BarChart3, Search, CheckCircle, XCircle, Facebook } from 'lucide-react'
 import Image from 'next/image'
 
 interface AttendanceRecord {
@@ -655,35 +655,49 @@ export default function HomePage() {
               Have questions about our attendance system or need support? 
               We're here to help you get the most out of ACETRACK.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="flex flex-col items-center space-y-3">
-                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Mail className="w-8 h-8 text-orange-500" />
-                </div>
-                <div className="text-center">
-                  <h4 className="font-semibold text-gray-900 text-lg">Email</h4>
-                  <p className="text-gray-600">acetrack2025@gmail.com</p>
-                </div>
-              </div>
-              <div className="flex flex-col items-center space-y-3">
-                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Phone className="w-8 h-8 text-orange-500" />
-                </div>
-                <div className="text-center">
-                  <h4 className="font-semibold text-gray-900 text-lg">Phone</h4>
-                  <p className="text-gray-600">09363288483 - PIO</p>
-                </div>
-              </div>
-              <div className="flex flex-col items-center space-y-3">
-                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
-                  <MapPin className="w-8 h-8 text-orange-500" />
-                </div>
-                <div className="text-center">
-                  <h4 className="font-semibold text-gray-900 text-lg">Address</h4>
-                  <p className="text-gray-600">Engineering Extension Building<br />DOrSU Main Campus</p>
-                </div>
-              </div>
-            </div>
+                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+               <div className="flex flex-col items-center space-y-3">
+                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
+                   <Mail className="w-8 h-8 text-orange-500" />
+                 </div>
+                 <div className="text-center">
+                   <h4 className="font-semibold text-gray-900 text-lg">Email</h4>
+                   <p className="text-gray-600">acetrack2025@gmail.com</p>
+                 </div>
+               </div>
+               <div className="flex flex-col items-center space-y-3">
+                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
+                   <Phone className="w-8 h-8 text-orange-500" />
+                 </div>
+                 <div className="text-center">
+                   <h4 className="font-semibold text-gray-900 text-lg">Phone</h4>
+                   <p className="text-gray-600">09363288483 - PIO</p>
+                 </div>
+               </div>
+               <div className="flex flex-col items-center space-y-3">
+                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
+                   <MapPin className="w-8 h-8 text-orange-500" />
+                 </div>
+                 <div className="text-center">
+                   <h4 className="font-semibold text-gray-900 text-lg">Address</h4>
+                   <p className="text-gray-600">Engineering Extension Building<br />DOrSU Main Campus</p>
+                 </div>
+               </div>
+               <div className="flex flex-col items-center space-y-3">
+                 <a 
+                   href="https://www.facebook.com/dorsu.aces" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center hover:bg-orange-200 transition-colors cursor-pointer"
+                 >
+                   <Facebook className="w-8 h-8 text-orange-500" />
+                 </a>
+                 <div className="text-center">
+                   <h4 className="font-semibold text-gray-900 text-lg">Facebook</h4>
+                   <p className="text-gray-600">Follow us on Facebook</p>
+                 </div>
+               </div>
+             </div>
           </div>
         </div>
       </section>
