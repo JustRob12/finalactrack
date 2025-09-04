@@ -152,9 +152,15 @@ export default function HomePage() {
       setStudentAttendance(attendanceRecords)
       setShowStudentSearch(true)
       
-      // Play audio if no attendance records found
+      // Play audio depending on attendance result
       if (attendanceRecords.length === 0) {
         playNoAttendanceAudio()
+      } else {
+        try {
+          const successAudio = new Audio('/audio/paldo.mp3')
+          successAudio.volume = 1
+          successAudio.play().catch(() => {})
+        } catch {}
       }
     } catch (error) {
       console.error('Error searching for student:', error)

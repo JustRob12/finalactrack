@@ -202,6 +202,9 @@ export default function ScannerDashboardPage() {
     if (activeTab === 'event') {
       fetchEvents()
     }
+    if (activeTab === 'qr-scanner') {
+      fetchEvents()
+    }
     if (activeTab === 'search') {
       fetchEvents()
       fetchStudentCount()
@@ -263,6 +266,7 @@ export default function ScannerDashboardPage() {
       const { data, error } = await supabase
         .from('events')
         .select('*')
+        .eq('status', 1)
         .order('start_datetime', { ascending: true })
 
       if (error) {
@@ -276,6 +280,25 @@ export default function ScannerDashboardPage() {
       setEventsLoading(false)
     }
   }
+
+  // Subscribe to event status changes so the dropdown updates when admin toggles active/inactive
+  useEffect(() => {
+    const channel = supabase
+      .channel('events-status-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        // Refetch only when on tabs where events are used
+        if (activeTab === 'event' || activeTab === 'qr-scanner') {
+          fetchEvents()
+        }
+      })
+      .subscribe()
+
+    return () => {
+      try {
+        supabase.removeChannel(channel)
+      } catch {}
+    }
+  }, [activeTab])
 
   const fetchStudentCount = async () => {
     setStudentCountLoading(true)
@@ -1324,7 +1347,7 @@ export default function ScannerDashboardPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                     >
                       <option value="">Choose an event...</option>
-                      {events.map((event) => (
+                      {events.filter(e => e.status === 1).map((event) => (
                         <option key={event.id} value={event.id}>
                           {event.name} - {new Date(event.start_datetime).toLocaleDateString()}
                         </option>

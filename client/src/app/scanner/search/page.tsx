@@ -178,6 +178,17 @@ export default function ScannerSearchPage() {
       }) || []
 
       setAttendanceStatus(statusArray)
+      
+      // Play success audio if the student has any attendance record
+      if (attendance && attendance.length > 0) {
+        try {
+          const audio = new Audio('/audio/paldo.mp3')
+          audio.volume = 1
+          audio.play().catch(() => {})
+        } catch (e) {
+          // Ignore audio playback errors (e.g., autoplay restrictions)
+        }
+      }
     } catch (error) {
       console.error('Error fetching attendance status:', error)
     } finally {
