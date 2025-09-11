@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Calendar, MapPin, Clock, CheckCircle, Clock3 } from 'lucide-react'
+import { Calendar, MapPin, Clock, CheckCircle, Clock3, XCircle } from 'lucide-react'
 
 interface Event {
   id: number
@@ -28,39 +28,42 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchEvents()
+
+    // Set up real-time subscription for events
+    const eventsSubscription = supabase
+      .channel('events_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'events'
+        },
+        (payload) => {
+          // Refetch events when any change occurs
+          fetchEvents()
+        }
+      )
+      .subscribe()
+
+    // Cleanup subscription on unmount
+    return () => {
+      eventsSubscription.unsubscribe()
+    }
   }, [])
 
   const fetchEvents = async () => {
     setEventsLoading(true)
     try {
-      // Fetching events for student dashboard
-      
-      // First, let's check all events to see what's available
-      const { data: allEvents, error: allEventsError } = await supabase
-        .from('events')
-        .select('*')
-        .order('start_datetime', { ascending: true })
-
-      if (allEventsError) {
-        console.error('Error fetching all events:', allEventsError)
-      } else {
-        // All events in database
-      }
-
-      // Temporarily fetch all events to debug
+      // Fetch all events (both active and inactive) for student dashboard
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        // .eq('status', 1) // Temporarily commented out to see all events
         .order('start_datetime', { ascending: true })
 
       if (error) {
         console.error('Error fetching events:', error)
       } else {
-        // Events found
-        if (data && data.length > 0) {
-                      // Event statuses retrieved
-        }
         setEvents(data || [])
       }
     } catch (error) {
@@ -72,29 +75,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-gray-900">Events</h2>
-        <button
-          onClick={async () => {
-            // Fetching all events for debugging
-            const { data, error } = await supabase
-              .from('events')
-              .select('*')
-              .order('start_datetime', { ascending: false })
-            
-            if (error) {
-              console.error('Debug fetch error:', error)
-            } else {
-              // All events (debug)
-              alert(`Found ${data?.length || 0} events in database`)
-            }
-          }}
-          className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
-        >
-          Debug Events
-        </button>
-      </div> */}
 
       {/* Events Grid */}
       {eventsLoading ? (
@@ -111,7 +91,9 @@ export default function Dashboard() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {events.map((event) => (
-            <div key={event.id} className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow">
+            <div key={event.id} className={`bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow ${
+              event.status === 0 ? 'opacity-75' : ''
+            }`}>
               {/* Event Banner */}
               <div className="h-48 bg-gray-200 relative">
                 {event.banner ? (
@@ -132,10 +114,15 @@ export default function Dashboard() {
                       <Clock3 className="w-3 h-3" />
                       <span>Coming Soon</span>
                     </div>
-                  ) : (
+                  ) : event.status === 1 ? (
                     <div className="flex items-center space-x-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
                       <CheckCircle className="w-3 h-3" />
                       <span>Active</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-1 bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">
+                      <XCircle className="w-3 h-3" />
+                      <span>Inactive</span>
                     </div>
                   )}
                 </div>

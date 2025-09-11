@@ -10,6 +10,7 @@ import { User, LogOut, ChevronDown, Home, QrCode } from 'lucide-react'
 import Dashboard from './components/dashboard'
 import QRCodeComponent from './components/qrcode'
 import Profile from './components/profile'
+import Attendance from './components/attendance'
 
 interface UserProfile {
   id: string
@@ -261,6 +262,7 @@ export default function StudentLayout() {
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'qrcode' && <QRCodeComponent profile={profile} />}
           {activeTab === 'profile' && <Profile profile={profile} onProfileUpdate={setProfile} />}
+          {activeTab === 'attendance' && <Attendance profile={profile} />}
         </div>
       </main>
 
@@ -292,15 +294,15 @@ export default function StudentLayout() {
             <span className="text-xs mt-1 text-gray-500">QR Code</span>
           </button>
 
-          {/* Profile */}
+          {/* Check Attendance */}
           <button
-            onClick={() => setActiveTab('profile')}
+            onClick={() => setActiveTab('attendance')}
             className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
-              activeTab === 'profile' ? 'text-orange-600' : 'text-gray-500'
+              activeTab === 'attendance' ? 'text-orange-600' : 'text-gray-500'
             }`}
           >
-            <User className={`w-6 h-6 ${activeTab === 'profile' ? 'text-orange-600' : 'text-gray-400'}`} />
-            <span className="text-xs mt-1">Profile</span>
+            <User className={`w-6 h-6 ${activeTab === 'attendance' ? 'text-orange-600' : 'text-gray-400'}`} />
+            <span className="text-xs mt-1">Attendance</span>
           </button>
         </div>
       </nav>
