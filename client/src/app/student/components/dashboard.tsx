@@ -59,7 +59,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .order('start_datetime', { ascending: true })
+        .order('start_datetime', { ascending: false })
 
       if (error) {
         console.error('Error fetching events:', error)
