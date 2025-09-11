@@ -229,9 +229,7 @@ export default function Attendance({ profile }: AttendanceProps) {
       {/* Student Info Card */}
       <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
         <div className="flex items-center space-x-4">
-          <div className="w-16 h-16 bg-orange-200 rounded-full flex items-center justify-center">
-            <User className="w-8 h-8 text-orange-600" />
-          </div>
+        
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
               {profile?.first_name} {profile?.middle_initial} {profile?.last_name}
