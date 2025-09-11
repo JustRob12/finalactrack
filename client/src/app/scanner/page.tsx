@@ -203,6 +203,8 @@ export default function ScannerDashboardPage() {
       fetchEvents()
     }
     if (activeTab === 'qr-scanner') {
+      // Clear selected event and refresh events when switching to scanner
+      setSelectedEvent(null)
       fetchEvents()
     }
     if (activeTab === 'search') {
@@ -266,16 +268,25 @@ export default function ScannerDashboardPage() {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .eq('status', 1)
         .order('start_datetime', { ascending: true })
 
       if (error) {
         console.error('Error fetching events:', error)
+        setEvents([]) // Clear events on error
       } else {
         setEvents(data || [])
+        
+        // Clear selected event if it's no longer active
+        if (selectedEvent) {
+          const selectedEventData = data?.find(e => e.id === selectedEvent && e.status === 1)
+          if (!selectedEventData) {
+            setSelectedEvent(null)
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching events:', error)
+      setEvents([]) // Clear events on error
     } finally {
       setEventsLoading(false)
     }
@@ -286,10 +297,8 @@ export default function ScannerDashboardPage() {
     const channel = supabase
       .channel('events-status-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
-        // Refetch only when on tabs where events are used
-        if (activeTab === 'event' || activeTab === 'qr-scanner') {
-          fetchEvents()
-        }
+        // Always refetch events when any event is updated
+        fetchEvents()
       })
       .subscribe()
 
@@ -298,7 +307,7 @@ export default function ScannerDashboardPage() {
         supabase.removeChannel(channel)
       } catch {}
     }
-  }, [activeTab])
+  }, [])
 
   const fetchStudentCount = async () => {
     setStudentCountLoading(true)
@@ -917,6 +926,14 @@ export default function ScannerDashboardPage() {
   const handleApproveAttendance = async () => {
     if (!scannedData || !selectedEvent) return
     
+    // Verify the selected event is still active
+    const selectedEventData = events.find(e => e.id === selectedEvent)
+    if (!selectedEventData || selectedEventData.status !== 1) {
+      setScannerError('Selected event is no longer active. Please select an active event.')
+      setShowApprovalModal(false)
+      return
+    }
+    
     try {
       setScannerLoading(true)
       
@@ -1353,6 +1370,9 @@ export default function ScannerDashboardPage() {
                         </option>
                       ))}
                     </select>
+                    {events.filter(e => e.status === 1).length === 0 && (
+                      <p className="text-xs text-gray-500 mt-1">No active events available</p>
+                    )}
                   </div>
 
                   {/* Scan Type Selection */}

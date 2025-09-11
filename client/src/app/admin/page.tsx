@@ -195,6 +195,11 @@ export default function AdminDashboardPage() {
     if (activeTab === 'event') {
       fetchEvents()
     }
+    if (activeTab === 'qr-scanner') {
+      // Clear selected event and refresh events when switching to scanner
+      setSelectedEvent(null)
+      fetchEvents()
+    }
     if (activeTab === 'stats') {
       fetchEvents()
       fetchStudentCount()
@@ -203,6 +208,23 @@ export default function AdminDashboardPage() {
       fetchFilteredStats()
     }
   }, [activeTab])
+  
+  // Subscribe to event status changes so the dropdown updates when admin toggles active/inactive
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-events-status-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        // Always refetch events when any event is updated
+        fetchEvents()
+      })
+      .subscribe()
+
+    return () => {
+      try {
+        supabase.removeChannel(channel)
+      } catch {}
+    }
+  }, [])
   
   useEffect(() => {
     if (activeTab === 'stats') {
@@ -263,11 +285,21 @@ export default function AdminDashboardPage() {
 
       if (error) {
         console.error('Error fetching events:', error)
+        setEvents([]) // Clear events on error
       } else {
         setEvents(data || [])
+        
+        // Clear selected event if it's no longer active (only for scanner)
+        if (selectedEvent && activeTab === 'qr-scanner') {
+          const selectedEventData = data?.find(e => e.id === selectedEvent && e.status === 1)
+          if (!selectedEventData) {
+            setSelectedEvent(null)
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching events:', error)
+      setEvents([]) // Clear events on error
     } finally {
       setEventsLoading(false)
     }
@@ -1042,6 +1074,14 @@ export default function AdminDashboardPage() {
   const handleApproveAttendance = async () => {
     if (!scannedData || !selectedEvent) return
     
+    // Verify the selected event is still active
+    const selectedEventData = events.find(e => e.id === selectedEvent)
+    if (!selectedEventData || selectedEventData.status !== 1) {
+      setScannerError('Selected event is no longer active. Please select an active event.')
+      setShowApprovalModal(false)
+      return
+    }
+    
     try {
       setScannerLoading(true)
       
@@ -1445,12 +1485,15 @@ export default function AdminDashboardPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                     >
                       <option value="">Choose an event...</option>
-                      {events.map((event) => (
+                      {events.filter(e => e.status === 1).map((event) => (
                         <option key={event.id} value={event.id}>
                           {event.name} - {new Date(event.start_datetime).toLocaleDateString()}
                         </option>
                       ))}
                     </select>
+                    {events.filter(e => e.status === 1).length === 0 && (
+                      <p className="text-xs text-gray-500 mt-1">No active events available</p>
+                    )}
                   </div>
 
                   {/* Scan Type Selection */}
