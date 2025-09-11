@@ -309,7 +309,7 @@ export default function StudentLayout() {
             }`}
           >
             <User className={`w-6 h-6 ${activeTab === 'attendance' ? 'text-orange-600' : 'text-gray-400'}`} />
-            <span className="text-xs mt-1">Attendance</span>
+            <span className="text-xs mt-1">Check</span>
           </button>
         </div>
       </nav>
