@@ -219,12 +219,19 @@ export default function StudentLayout() {
               onClick={() => setShowDropdown(!showDropdown)}
               className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-gray-600" />
+              <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200">
+                {profile?.avatar ? (
+                  <img 
+                    src={profile.avatar} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                    <User className="w-4 h-4 text-gray-600" />
+                  </div>
+                )}
               </div>
-              <span className="text-sm font-medium text-gray-700">
-                {profile?.first_name} {profile?.last_name}
-              </span>
               <ChevronDown className="w-4 h-4 text-gray-500" />
             </button>
 

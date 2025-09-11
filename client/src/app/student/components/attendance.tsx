@@ -71,32 +71,47 @@ export default function Attendance({ profile }: AttendanceProps) {
 
       if (attendanceError) throw attendanceError
 
-      // Create a map of events for quick lookup
-      const eventsMap = new Map(events?.map(event => [event.id, event]) || [])
+      // Create a map of attendance records for quick lookup
+      const attendanceMap = new Map(attendance?.map(record => [record.event_id, record]) || [])
 
-      // Combine attendance records with event information
-      const recordsWithEvents: AttendanceRecord[] = (attendance || []).map(record => {
-        const event = eventsMap.get(record.event_id)
-        let status: 'present' | 'partial' | 'absent' = 'absent'
+      // Create records for ALL events, marking as absent if no attendance record exists
+      const allRecordsWithEvents: AttendanceRecord[] = (events || []).map(event => {
+        const attendanceRecord = attendanceMap.get(event.id)
         
-        if (record.time_in && record.time_out) {
-          status = 'present'
-        } else if (record.time_in || record.time_out) {
-          status = 'partial'
-        }
+        if (attendanceRecord) {
+          // Student has attendance record for this event
+          let status: 'present' | 'partial' | 'absent' = 'absent'
+          
+          if (attendanceRecord.time_in && attendanceRecord.time_out) {
+            status = 'present'
+          } else if (attendanceRecord.time_in || attendanceRecord.time_out) {
+            status = 'partial'
+          }
 
-        return {
-          id: record.id,
-          event_id: record.event_id,
-          event_name: event?.name || 'Unknown Event',
-          event_date: event?.start_datetime || '',
-          time_in: record.time_in,
-          time_out: record.time_out,
-          status
+          return {
+            id: attendanceRecord.id,
+            event_id: event.id,
+            event_name: event.name,
+            event_date: event.start_datetime,
+            time_in: attendanceRecord.time_in,
+            time_out: attendanceRecord.time_out,
+            status
+          }
+        } else {
+          // Student has no attendance record for this event - mark as absent
+          return {
+            id: 0, // No attendance record ID
+            event_id: event.id,
+            event_name: event.name,
+            event_date: event.start_datetime,
+            time_in: null,
+            time_out: null,
+            status: 'absent'
+          }
         }
       })
 
-      setAttendanceRecords(recordsWithEvents)
+      setAttendanceRecords(allRecordsWithEvents)
     } catch (error) {
       console.error('Error fetching attendance records:', error)
       setError('Failed to load attendance records. Please try again.')
@@ -268,8 +283,8 @@ export default function Attendance({ profile }: AttendanceProps) {
       {attendanceRecords.length === 0 ? (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
           <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Attendance Records</h3>
-          <p className="text-gray-600">You haven't attended any events yet. Check back after participating in events.</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Events Available</h3>
+          <p className="text-gray-600">There are no events in the system yet. Check back later for upcoming events.</p>
         </div>
       ) : (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -281,7 +296,7 @@ export default function Attendance({ profile }: AttendanceProps) {
           </div>
           <div className="divide-y divide-gray-200">
             {attendanceRecords.map((record, index) => (
-              <div key={record.id} className="p-6 hover:bg-gray-50 transition-colors">
+              <div key={`${record.event_id}-${record.id || 'absent'}`} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
                   {/* Event Info */}
                   <div className="flex-1">
