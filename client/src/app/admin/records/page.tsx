@@ -556,18 +556,18 @@ export default function AdminRecordsPage() {
 
             {/* Download Section */}
             {selectedEvent && (
-              <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg border border-orange-200 p-6">
-                <div className="flex items-center justify-between">
+              <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg border border-orange-200 p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div className="flex items-center">
-                    <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
-                      <FileText className="w-6 h-6 text-orange-600" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-3 sm:mr-4">
+                      <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
                     </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">{selectedEvent.name}</h3>
-                      <div className="text-sm text-gray-600">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-base sm:text-lg font-bold text-gray-900 truncate">{selectedEvent.name}</h3>
+                      <div className="text-xs sm:text-sm text-gray-600">
                         {loadingRecords ? (
                           <span className="flex items-center">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
+                            <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-orange-600 mr-2"></div>
                             Loading records...
                           </span>
                         ) : (
@@ -580,7 +580,7 @@ export default function AdminRecordsPage() {
                   <button
                     onClick={downloadExcel}
                     disabled={attendanceRecords.length === 0 || downloading || loadingRecords}
-                    className="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold text-sm"
+                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold text-sm"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     {downloading ? 'Generating...' : 'Download Excel'}
@@ -588,7 +588,7 @@ export default function AdminRecordsPage() {
                 </div>
                 
                 {attendanceRecords.length === 0 && !loadingRecords && (
-                  <p className="text-gray-500 text-sm mt-3">
+                  <p className="text-gray-500 text-xs sm:text-sm mt-3">
                     No attendance records found for this event.
                   </p>
                 )}
