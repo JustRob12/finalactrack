@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { ArrowLeft, X, AlertCircle } from 'lucide-react'
 import Image from 'next/image'
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [redirecting, setRedirecting] = useState(false) // Prevent multiple redirects
@@ -296,5 +296,20 @@ export default function LoginPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   )
 }

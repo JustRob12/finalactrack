@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
@@ -14,7 +14,7 @@ interface Course {
   short: string
 }
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const [formData, setFormData] = useState({
     studentId: '',
     firstName: '',
@@ -766,5 +766,20 @@ export default function RegisterPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <RegisterPageContent />
+    </Suspense>
   )
 }
