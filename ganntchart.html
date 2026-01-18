@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AquaNet Project – Gantt Chart (20 Weeks)</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden; /* no scrollbars */
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #fafafa;
+    }
+
+    .page {
+      box-sizing: border-box;
+      height: 100vh;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 26px; /* larger title font */
+      text-align: center;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      text-align: center;
+      color: #555;
+      margin-bottom: 2px;
+    }
+
+    .chart {
+      flex: 1;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+      display: grid;
+      /* wider task column so full text fits, tighter week columns */
+      grid-template-columns: 320px repeat(20, minmax(0, 1fr)); /* task column + 20 weeks */
+      grid-auto-rows: auto;  /* let row height grow with wrapped text */
+      font-size: 15px;       /* bigger labels */
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header-cell,
+    .task-label {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 0 4px; /* tighter horizontal padding */
+      box-sizing: border-box;
+      border-bottom: 1px solid #eee;
+      white-space: normal;      /* allow wrapping */
+      overflow: visible;
+      text-overflow: clip;
+    }
+
+    .header-cell {
+      justify-content: center;
+      border-bottom: 1px solid #ddd;
+      border-right: 1px solid #f0f0f0;
+      background: #fafafa;
+      font-weight: 700;
+    }
+
+    .task-label {
+      border-right: 1px solid #eee;
+      background: #fcfcfc;
+      /* always keep task labels in the first column so tasks stay on the side */
+      grid-column: 1 / span 1;
+      font-weight: 600;
+    }
+
+    /* vertical week grid lines */
+    .chart::before {
+      content: "";
+      position: absolute;
+      left: 230px;
+      top: 22px;
+      right: 0;
+      bottom: 0;
+      background-image: repeating-linear-gradient(
+        to right,
+        rgba(0,0,0,0.04) 0,
+        rgba(0,0,0,0.04) 1px,
+        transparent 1px,
+        transparent calc((100% - 0px) / 20)
+      );
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bar {
+      border-radius: 4px;
+      height: 12px;
+      margin: 2px 0;  /* tighter vertical spacing so rows fit better */
+      box-sizing: border-box;
+      border: 1px solid rgba(0,0,0,0.15);
+      z-index: 1;
+    }
+
+    /* phase colors */
+    .req     { background: #4a90e2; }  /* blue */
+    .design  { background: #9b59b6; }  /* purple */
+    .impl    { background: #00bcd4; }  /* cyan */
+    .test    { background: #e74c3c; }  /* red */
+    .deploy  { background: #27ae60; }  /* green */
+    .maint   { background: #7f8c8d; }  /* gray */
+
+    /* helper: place bar into grid (start week, duration) */
+    .w1  { grid-column: 2 / span 1; }
+    .w2  { grid-column: 3 / span 1; }
+    .w3  { grid-column: 4 / span 1; }
+    .w4  { grid-column: 5 / span 1; }
+    .w5  { grid-column: 6 / span 1; }
+    .w6  { grid-column: 7 / span 1; }
+    .w7  { grid-column: 8 / span 1; }
+    .w8  { grid-column: 9 / span 1; }
+    .w9  { grid-column: 10 / span 1; }
+    .w10 { grid-column: 11 / span 1; }
+    .w11 { grid-column: 12 / span 1; }
+    .w12 { grid-column: 13 / span 1; }
+    .w13 { grid-column: 14 / span 1; }
+    .w14 { grid-column: 15 / span 1; }
+    .w15 { grid-column: 16 / span 1; }
+    .w16 { grid-column: 17 / span 1; }
+    .w17 { grid-column: 18 / span 1; }
+    .w18 { grid-column: 19 / span 1; }
+    .w19 { grid-column: 20 / span 1; }
+    .w20 { grid-column: 21 / span 1; }
+
+    /* multi-week spans */
+    .span2  { grid-column-end: span 2; }
+    .span3  { grid-column-end: span 3; }
+    .span4  { grid-column-end: span 4; }
+    .span6  { grid-column-end: span 6; }
+    .span7  { grid-column-end: span 7; }
+    .span8  { grid-column-end: span 8; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>AquaNet Project – Gantt Chart</h1>
+    <div class="subtitle">20-Week Schedule (Requirements → Maintenance)</div>
+
+    <div class="chart">
+      <!-- header row -->
+      <div class="header-cell">Task</div>
+      <div class="header-cell">W1</div>
+      <div class="header-cell">W2</div>
+      <div class="header-cell">W3</div>
+      <div class="header-cell">W4</div>
+      <div class="header-cell">W5</div>
+      <div class="header-cell">W6</div>
+      <div class="header-cell">W7</div>
+      <div class="header-cell">W8</div>
+      <div class="header-cell">W9</div>
+      <div class="header-cell">W10</div>
+      <div class="header-cell">W11</div>
+      <div class="header-cell">W12</div>
+      <div class="header-cell">W13</div>
+      <div class="header-cell">W14</div>
+      <div class="header-cell">W15</div>
+      <div class="header-cell">W16</div>
+      <div class="header-cell">W17</div>
+      <div class="header-cell">W18</div>
+      <div class="header-cell">W19</div>
+      <div class="header-cell">W20</div>
+
+      <!-- 1. Requirements Analysis (blue) -->
+      <div class="task-label">1. Requirements Analysis</div>
+      <!-- phase summary bar: weeks 1–4 -->
+      <div class="bar req w1 span4"></div>
+
+      <div class="task-label">1.1 Identify and address stakeholder needs</div>
+      <div class="bar req w1"></div>
+
+      <div class="task-label">1.2 Requirements collection</div>
+      <div class="bar req w2"></div>
+
+      <div class="task-label">1.3 Define and establish system objectives and project scope</div>
+      <div class="bar req w3"></div>
+
+      <div class="task-label">1.4 Requirements Documentation</div>
+      <div class="bar req w4"></div>
+
+      <!-- 2. System and Software Design (purple) -->
+      <div class="task-label">2. System and Software Design</div>
+      <!-- phase summary bar: weeks 5–10 (6 weeks) -->
+      <div class="bar design w5 span6"></div>
+
+      <div class="task-label">2.1 System architecture</div>
+      <div class="bar design w5"></div>
+
+      <div class="task-label">2.2 Database schema</div>
+      <div class="bar design w6"></div>
+
+      <div class="task-label">2.3 User interface (UI) and user experience (UX) designs</div>
+      <div class="bar design w7 span2"></div> <!-- weeks 7–8 -->
+
+      <div class="task-label">2.4 Conceptual Framework</div>
+      <div class="bar design w9"></div>
+
+      <div class="task-label">2.5 Design review and validation</div>
+      <div class="bar design w10"></div>
+
+      <!-- 3. Implementation (cyan) -->
+      <div class="task-label">3. Implementation</div>
+      <!-- phase summary bar: weeks 9–16 (8 weeks) -->
+      <div class="bar impl w9 span8"></div>
+
+      <div class="task-label">3.1 Front-end and mobile interface</div>
+      <div class="bar impl w9 span3"></div> <!-- weeks 9–11 -->
+
+      <div class="task-label">3.2 Back-end and server components</div>
+      <div class="bar impl w11 span3"></div> <!-- weeks 11–13 -->
+
+      <div class="task-label">3.3 API and third-party service integrations</div>
+      <div class="bar impl w13 span2"></div> <!-- weeks 13–14 -->
+
+      <div class="task-label">3.4 Code quality assurance</div>
+      <div class="bar impl w15"></div>
+
+      <div class="task-label">3.5 Debugging</div>
+      <div class="bar impl w16"></div>
+
+      <!-- 4. Testing (red) -->
+      <div class="task-label">4. Testing</div>
+      <!-- phase summary bar: weeks 14–20 (7 weeks) -->
+      <div class="bar test w14 span7"></div>
+
+      <div class="task-label">4.1 Test planning and test cases</div>
+      <div class="bar test w14"></div>
+
+      <div class="task-label">4.2 Unit tests</div>
+      <div class="bar test w15"></div>
+
+      <div class="task-label">4.3 Integration tests</div>
+      <div class="bar test w16"></div>
+
+      <div class="task-label">4.4 System tests</div>
+      <div class="bar test w17"></div>
+
+      <div class="task-label">4.5 User acceptance testing</div>
+      <div class="bar test w18"></div>
+
+      <div class="task-label">4.6 Issue tracking and resolution</div>
+      <div class="bar test w19 span2"></div> <!-- weeks 19–20 -->
+
+      <!-- 5. Deployment (green) -->
+      <div class="task-label">5. Deployment</div>
+      <!-- phase summary bar: weeks 18–20 (3 weeks) -->
+      <div class="bar deploy w18 span3"></div>
+
+      <div class="task-label">5.1 Deployment and release plan</div>
+      <div class="bar deploy w18"></div>
+
+      <div class="task-label">5.2 User Training</div>
+      <div class="bar deploy w19"></div>
+
+      <div class="task-label">5.3 System Launch</div>
+      <div class="bar deploy w20"></div>
+
+      <div class="task-label">5.4 Documentation Turnover</div>
+      <div class="bar deploy w20"></div>
+
+      <!-- 6. Maintenance (gray) -->
+      <div class="task-label">6. Maintenance</div>
+      <!-- phase summary bar: week 20 (1 week, ongoing) -->
+      <div class="bar maint w20"></div>
+
+      <div class="task-label">6.1 System monitoring and performance tracking</div>
+      <div class="bar maint w20"></div>
+
+      <div class="task-label">6.2 Regular updates and bug fixes</div>
+      <div class="bar maint w20"></div>
+
+      <div class="task-label">6.3 Scalability and future upgrades</div>
+      <div class="bar maint w20"></div>
+    </div>
+  </div>
+</body>
+</html>
