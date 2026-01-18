@@ -9,6 +9,7 @@ interface AuthContextType {
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string, userData: Record<string, any>) => Promise<{ error: Error | null; data?: { user: User | null; session: Session | null } | null }>
+  signInWithGoogle: (redirectPath?: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   refreshSession: () => Promise<boolean>
   checkAndRefreshSession: () => Promise<boolean>
@@ -22,6 +23,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null)
 
+  // Function to validate user profile exists
+  const validateUserProfile = async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 is "not found" error, which is expected if profile doesn't exist
+        console.error('Error checking user profile:', error)
+        return false
+      }
+
+      // Profile exists if data is not null
+      return data !== null
+    } catch (error) {
+      console.error('Exception in validateUserProfile:', error)
+      return false
+    }
+  }
+
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
@@ -33,7 +57,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Initial session check
         
         if (session) {
+          // Check if we're on the registration page - allow users without profiles there
+          const isRegistrationPage = typeof window !== 'undefined' && 
+            (window.location.pathname === '/register' || window.location.pathname.startsWith('/register'))
+          
+        // Check if we're on login or registration page - allow users without profiles there temporarily
+        const isLoginOrRegisterPage = typeof window !== 'undefined' && 
+          (window.location.pathname === '/login' || 
+           window.location.pathname === '/register' || 
+           window.location.pathname.startsWith('/register'))
+        
+        if (isLoginOrRegisterPage) {
+          // On login/registration page, allow user without profile temporarily
+          // Login page will check and show modal, registration page will create profile
+          console.log('📝 Login/Registration page detected, allowing user without profile temporarily')
           setUser(session.user)
+        } else {
+          // Not on login/registration page, validate profile exists
+          const hasProfile = await validateUserProfile(session.user.id)
+          
+          if (hasProfile) {
+            setUser(session.user)
+          } else {
+            console.log('⚠️ User profile not found, signing out user')
+            // Profile doesn't exist, sign out the user
+            await supabase.auth.signOut()
+            setUser(null)
+          }
+        }
         } else {
           // Check if we're on a password reset page
           const urlParams = new URLSearchParams(window.location.search)
@@ -71,20 +122,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       // Auth state change detected
       
-      if (event === 'TOKEN_REFRESHED') {
-        // Token refreshed successfully
-        setUser(session?.user ?? null)
-      } else if (event === 'PASSWORD_RECOVERY') {
-        // Password recovery event detected
-        setUser(session?.user ?? null)
-      } else if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT') {
         // User signed out
         setUser(null)
-      } else if (event === 'SIGNED_IN') {
-        // User signed in
-        setUser(session?.user ?? null)
+        setLoading(false)
+        return
+      }
+      
+      if (session?.user) {
+        // Check if we're on login or registration page - allow users without profiles there temporarily
+        const isLoginOrRegisterPage = typeof window !== 'undefined' && 
+          (window.location.pathname === '/login' || 
+           window.location.pathname === '/register' || 
+           window.location.pathname.startsWith('/register'))
+        
+        if (isLoginOrRegisterPage) {
+          // On login/registration page, allow user without profile temporarily
+          // Login page will check and show modal, registration page will create profile
+          console.log('📝 Login/Registration page detected during auth change, allowing user without profile temporarily')
+          if (event === 'TOKEN_REFRESHED') {
+            setUser(session.user)
+          } else if (event === 'PASSWORD_RECOVERY') {
+            setUser(session.user)
+          } else if (event === 'SIGNED_IN') {
+            setUser(session.user)
+          } else {
+            setUser(session.user)
+          }
+        } else {
+          // Not on registration page, validate profile exists
+          const hasProfile = await validateUserProfile(session.user.id)
+          
+          if (hasProfile) {
+            // Profile exists, set user
+            if (event === 'TOKEN_REFRESHED') {
+              // Token refreshed successfully
+              setUser(session.user)
+            } else if (event === 'PASSWORD_RECOVERY') {
+              // Password recovery event detected
+              setUser(session.user)
+            } else if (event === 'SIGNED_IN') {
+              // User signed in
+              setUser(session.user)
+            } else {
+              setUser(session.user)
+            }
+          } else {
+            // Profile doesn't exist, sign out the user
+            console.log('⚠️ User profile not found during auth state change, signing out')
+            await supabase.auth.signOut()
+            setUser(null)
+          }
+        }
       } else {
-        setUser(session?.user ?? null)
+        setUser(null)
       }
       
       setLoading(false)
@@ -104,6 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Set up new interval to refresh token every 50 minutes (tokens typically expire in 1 hour)
       const interval = setInterval(async () => {
         // Performing periodic token refresh
+        // refreshSession already validates profile, so this will auto-logout if profile is deleted
         await refreshSession()
       }, 50 * 60 * 1000) // 50 minutes
 
@@ -146,6 +238,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error, data }
     } catch (error) {
       return { error: error as Error, data: null }
+    }
+  }
+
+  const signInWithGoogle = async (redirectPath: string = '/login') => {
+    try {
+      if (typeof window === 'undefined') {
+        return { error: new Error('Window is not available') }
+      }
+
+      const redirectUrl = `${window.location.origin}${redirectPath}`
+      
+      // Log for debugging - check browser console to verify the URL
+      console.log('🔍 Google OAuth Debug Info:')
+      console.log('  - Current origin:', window.location.origin)
+      console.log('  - Redirect path:', redirectPath)
+      console.log('  - Full redirect URL:', redirectUrl)
+      console.log('  - Expected: http://localhost:3000' + redirectPath)
+      
+      // Warn if redirect URL doesn't match localhost (for development)
+      if (!redirectUrl.includes('localhost') && !redirectUrl.includes('127.0.0.1')) {
+        console.warn('⚠️ Warning: Redirect URL is not localhost. Make sure this is intentional for production.')
+      }
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            // Force the redirect URL to be used
+            redirect_to: redirectUrl,
+          },
+        },
+      })
+      
+      if (error) {
+        console.error('❌ Google OAuth Error:', error)
+      }
+      
+      return { error }
+    } catch (error) {
+      console.error('❌ Exception in signInWithGoogle:', error)
+      return { error: error as Error }
     }
   }
 
@@ -203,9 +337,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       if (data.session) {
-        // Session refreshed successfully
-        setUser(data.session.user)
-        return true
+        // Check if we're on login or registration page - allow users without profiles there temporarily
+        const isLoginOrRegisterPage = typeof window !== 'undefined' && 
+          (window.location.pathname === '/login' || 
+           window.location.pathname === '/register' || 
+           window.location.pathname.startsWith('/register'))
+        
+        if (isLoginOrRegisterPage) {
+          // On login/registration page, allow user without profile temporarily
+          setUser(data.session.user)
+          return true
+        } else {
+          // Not on registration page, validate profile exists
+          const hasProfile = await validateUserProfile(data.session.user.id)
+          
+          if (hasProfile) {
+            // Session refreshed successfully and profile exists
+            setUser(data.session.user)
+            return true
+          } else {
+            // Profile doesn't exist, sign out the user
+            console.log('⚠️ User profile not found during session refresh, signing out')
+            await supabase.auth.signOut()
+            setUser(null)
+            return false
+          }
+        }
       } else {
         // No session returned from refresh
         setUser(null)
@@ -307,6 +464,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signIn,
     signUp,
+    signInWithGoogle,
     signOut,
     refreshSession,
     checkAndRefreshSession,
