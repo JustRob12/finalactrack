@@ -150,7 +150,7 @@ export default function StudentLayout() {
       <header className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <h1 className="text-xl font-semibold  text-orange-600">Acetrack</h1>
+            <h1 className="text-xl font-semibold  text-orange-600">ACETRACK</h1>
           </div>
 
           {/* User Dropdown */}
@@ -206,7 +206,7 @@ export default function StudentLayout() {
       {/* Content Area */}
       <main className="flex-1 p-6 pb-24">
         <div className="max-w-7xl mx-auto">
-          {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'dashboard' && <Dashboard profile={profile} />}
           {activeTab === 'qrcode' && <QRCodeComponent profile={profile} />}
           {activeTab === 'profile' && <Profile profile={profile} onProfileUpdate={setProfile} />}
           {activeTab === 'attendance' && <Attendance profile={profile} />}

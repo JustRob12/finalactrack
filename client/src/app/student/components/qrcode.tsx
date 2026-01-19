@@ -64,7 +64,8 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
         timestamp: getPhilippineTime()
       }
 
-      const qrData = JSON.stringify(userData)
+      // Prefix payload so scanners can reject non-ACETRACK QRs early
+      const qrData = `ACETRACK|${JSON.stringify(userData)}`
       const qrCodeUrl = await QRCode.toDataURL(qrData, {
         width: 300,
         margin: 2,
@@ -338,6 +339,11 @@ export default function QRCodeComponent({ profile }: QRCodeProps) {
                </div>
             </div>
           </div>
+
+          {/* Note (outside the ID card) */}
+          <p className="max-w-[350px] text-center text-xs text-gray-600 px-4">
+            This is the new version. Please download the latest one, and do not use the old QR code from the 1st semester.
+          </p>
         </div>
       ) : (
         <div className="text-center space-y-4">

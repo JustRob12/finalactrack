@@ -985,7 +985,15 @@ export default function AdminDashboardPage() {
 
       if (code) {
         try {
-          const scannedData = JSON.parse(code.data)
+          const raw = code.data || ''
+          const prefix = 'ACETRACK|'
+          if (!raw.startsWith(prefix)) {
+            setScannerError('Your QR CODE is INVALID')
+            stopScanning()
+            return
+          }
+
+          const scannedData = JSON.parse(raw.slice(prefix.length))
               
               // Check for required fields - support both student_id and id
               const studentId = scannedData.student_id || scannedData.id
@@ -1017,12 +1025,12 @@ export default function AdminDashboardPage() {
                 
                 return
           } else {
-            setScannerError('Invalid QR code format - missing student ID')
+            setScannerError('Your QR CODE is INVALID')
             stopScanning()
                 return
           }
         } catch (error) {
-          setScannerError('Invalid QR code format - not valid JSON')
+          setScannerError('Your QR CODE is INVALID')
           stopScanning()
               return
         }

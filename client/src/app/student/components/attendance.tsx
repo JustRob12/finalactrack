@@ -12,7 +12,7 @@ interface AttendanceRecord {
   event_date: string
   time_in: string | null
   time_out: string | null
-  status: 'present' | 'partial' | 'absent'
+  status: 'cleared' | 'partial' | 'absent'
 }
 
 interface UserProfile {
@@ -40,6 +40,7 @@ export default function Attendance({ profile }: AttendanceProps) {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showSanctionsModal, setShowSanctionsModal] = useState(false)
 
   useEffect(() => {
     if (profile?.student_id) {
@@ -80,13 +81,10 @@ export default function Attendance({ profile }: AttendanceProps) {
         
         if (attendanceRecord) {
           // Student has attendance record for this event
-          let status: 'present' | 'partial' | 'absent' = 'absent'
-          
-          if (attendanceRecord.time_in && attendanceRecord.time_out) {
-            status = 'present'
-          } else if (attendanceRecord.time_in || attendanceRecord.time_out) {
-            status = 'partial'
-          }
+          const hasTimeIn = !!attendanceRecord.time_in
+          const hasTimeOut = !!attendanceRecord.time_out
+          const status: 'cleared' | 'partial' | 'absent' =
+            hasTimeIn && hasTimeOut ? 'cleared' : hasTimeIn || hasTimeOut ? 'partial' : 'absent'
 
           return {
             id: attendanceRecord.id,
@@ -141,10 +139,10 @@ export default function Attendance({ profile }: AttendanceProps) {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'present':
+      case 'cleared':
         return <CheckCircle className="w-5 h-5 text-green-600" />
       case 'partial':
-        return <Clock className="w-5 h-5 text-yellow-600" />
+        return <Clock className="w-5 h-5 text-orange-600" />
       case 'absent':
         return <XCircle className="w-5 h-5 text-red-600" />
       default:
@@ -154,10 +152,10 @@ export default function Attendance({ profile }: AttendanceProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'present':
+      case 'cleared':
         return 'bg-green-100 text-green-800 border-green-200'
       case 'partial':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+        return 'bg-orange-100 text-orange-800 border-orange-200'
       case 'absent':
         return 'bg-red-100 text-red-800 border-red-200'
       default:
@@ -167,12 +165,12 @@ export default function Attendance({ profile }: AttendanceProps) {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'present':
-        return 'Present'
-      case 'partial':
-        return 'Partial'
+      case 'cleared':
+        return 'Cleared'
       case 'absent':
         return 'Absent'
+      case 'partial':
+        return 'Partial'
       default:
         return 'Unknown'
     }
@@ -224,6 +222,13 @@ export default function Attendance({ profile }: AttendanceProps) {
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Check Attendance</h2>
           <p className="text-gray-600 mt-1">View your attendance records and event participation</p>
         </div>
+
+        <button
+          onClick={() => setShowSanctionsModal(true)}
+          className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-semibold transition-colors shadow-sm"
+        >
+          Sanctions
+        </button>
       </div>
 
       {/* Student Info Card */}
@@ -240,44 +245,44 @@ export default function Attendance({ profile }: AttendanceProps) {
         </div>
       </div>
 
-      {/* Attendance Summary */}
+      {/* Attendance Summary (Orange theme) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
           <div className="flex items-center space-x-3">
             <CheckCircle className="w-8 h-8 text-green-600" />
             <div>
-              <p className="text-2xl font-bold text-green-800">
-                {attendanceRecords.filter(r => r.status === 'present').length}
+              <p className="text-2xl font-bold text-gray-900">
+                {attendanceRecords.filter(r => r.status === 'cleared').length}
               </p>
-              <p className="text-sm text-green-600">Present</p>
+              <p className="text-sm text-orange-700 font-medium">Cleared</p>
             </div>
           </div>
         </div>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
           <div className="flex items-center space-x-3">
-            <Clock className="w-8 h-8 text-yellow-600" />
+            <Clock className="w-8 h-8 text-orange-600" />
             <div>
-              <p className="text-2xl font-bold text-yellow-800">
+              <p className="text-2xl font-bold text-gray-900">
                 {attendanceRecords.filter(r => r.status === 'partial').length}
               </p>
-              <p className="text-sm text-yellow-600">Partial</p>
+              <p className="text-sm text-orange-700 font-medium">Partial</p>
             </div>
           </div>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
           <div className="flex items-center space-x-3">
             <XCircle className="w-8 h-8 text-red-600" />
             <div>
-              <p className="text-2xl font-bold text-red-800">
+              <p className="text-2xl font-bold text-gray-900">
                 {attendanceRecords.filter(r => r.status === 'absent').length}
               </p>
-              <p className="text-sm text-red-600">Absent</p>
+              <p className="text-sm text-orange-700 font-medium">Absent</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Attendance Records */}
+      {/* Attendance Records (Table - mobile scroll) */}
       {attendanceRecords.length === 0 ? (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
           <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -285,61 +290,136 @@ export default function Attendance({ profile }: AttendanceProps) {
           <p className="text-gray-600">There are no events in the system yet. Check back later for upcoming events.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+        <div className="bg-white rounded-xl border border-orange-200 overflow-hidden shadow-sm">
+          <div className="bg-orange-50 px-4 sm:px-6 py-4 border-b border-orange-200">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center">
               <Calendar className="w-5 h-5 mr-2 text-orange-600" />
               Attendance Logs
             </h3>
+            <p className="text-sm text-orange-700 mt-1">
+              Note: Partial means only Time In or Time Out was recorded.
+            </p>
           </div>
-          <div className="divide-y divide-gray-200">
-            {attendanceRecords.map((record, index) => (
-              <div key={`${record.event_id}-${record.id || 'absent'}`} className="p-6 hover:bg-gray-50 transition-colors">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-                  {/* Event Info */}
-                  <div className="flex-1">
-                    <div className="flex items-start space-x-4">
-                      <div className="flex-shrink-0">
-                        {getStatusIcon(record.status)}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-1">
-                          {record.event_name}
-                        </h4>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {formatDate(record.event_date)}
-                        </p>
-                        <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                          {record.time_in && (
-                            <div className="flex items-center space-x-2 text-sm">
-                              <Clock className="w-4 h-4 text-green-600" />
-                              <span className="text-gray-700">
-                                <span className="font-medium">Time In:</span> {formatDateTime(record.time_in)}
-                              </span>
-                            </div>
-                          )}
-                          {record.time_out && (
-                            <div className="flex items-center space-x-2 text-sm">
-                              <Clock className="w-4 h-4 text-red-600" />
-                              <span className="text-gray-700">
-                                <span className="font-medium">Time Out:</span> {formatDateTime(record.time_out)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Status Badge */}
-                  <div className="flex-shrink-0">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(record.status)}`}>
-                      {getStatusText(record.status)}
-                    </span>
-                  </div>
-                </div>
+          {/* Mobile horizontal scroll */}
+          <div className="overflow-x-auto">
+            <table className="min-w-[820px] w-full border-collapse">
+              <thead className="bg-white">
+                <tr className="text-left">
+                  <th className="px-4 sm:px-6 py-3 text-xs font-bold text-orange-700 uppercase tracking-wider border-b border-orange-100 w-[52px]">
+                    No
+                  </th>
+                  <th className="px-4 sm:px-6 py-3 text-xs font-bold text-orange-700 uppercase tracking-wider border-b border-orange-100">
+                    Event Name
+                  </th>
+                  <th className="px-4 sm:px-6 py-3 text-xs font-bold text-orange-700 uppercase tracking-wider border-b border-orange-100 w-[220px]">
+                    Time In
+                  </th>
+                  <th className="px-4 sm:px-6 py-3 text-xs font-bold text-orange-700 uppercase tracking-wider border-b border-orange-100 w-[220px]">
+                    Time Out
+                  </th>
+                  <th className="px-4 sm:px-6 py-3 text-xs font-bold text-orange-700 uppercase tracking-wider border-b border-orange-100 w-[140px]">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {attendanceRecords.map((record, index) => (
+                  <tr
+                    key={`${record.event_id}-${record.id || 'absent'}`}
+                    className="hover:bg-orange-50/40 transition-colors"
+                  >
+                    <td className="px-4 sm:px-6 py-4 text-sm text-gray-700 border-b border-orange-50">
+                      {index + 1}
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 border-b border-orange-50">
+                      <div className="font-semibold text-gray-900">{record.event_name}</div>
+                      <div className="text-xs text-gray-500 mt-1">{formatDate(record.event_date)}</div>
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 text-sm text-gray-700 border-b border-orange-50">
+                      {record.time_in ? (
+                        <span className="inline-flex items-center space-x-2">
+                          <Clock className="w-4 h-4 text-orange-600" />
+                          <span>{formatDateTime(record.time_in)}</span>
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 text-sm text-gray-700 border-b border-orange-50">
+                      {record.time_out ? (
+                        <span className="inline-flex items-center space-x-2">
+                          <Clock className="w-4 h-4 text-orange-600" />
+                          <span>{formatDateTime(record.time_out)}</span>
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 border-b border-orange-50">
+                      <span
+                        className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
+                          record.status
+                        )}`}
+                      >
+                        {getStatusIcon(record.status)}
+                        <span>{getStatusText(record.status)}</span>
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Sanctions Modal */}
+      {showSanctionsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-orange-200 overflow-hidden">
+            <div className="px-6 py-4 bg-orange-50 border-b border-orange-200 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">Sanctions</h3>
+              <button
+                onClick={() => setShowSanctionsModal(false)}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+                aria-label="Close sanctions modal"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <div className="bg-white border border-orange-200 rounded-xl p-4">
+                <p className="text-sm text-gray-700">
+                  {attendanceRecords.filter(r => r.status === 'absent').length === 0
+                    ? 'No sanctions yet.'
+                    : 'No sanctions have been assigned yet.'}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  This section will be updated once sanctions are implemented.
+                </p>
               </div>
-            ))}
+
+              {/* Placeholder example (only inside modal, as requested) */}
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                <p className="text-xs font-bold text-orange-800 uppercase tracking-wider mb-2">
+                  Example (not enforced yet)
+                </p>
+                <p className="text-sm text-orange-900">
+                  1 absent = school supplies
+                </p>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-orange-200 flex justify-end">
+              <button
+                onClick={() => setShowSanctionsModal(false)}
+                className="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-semibold transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

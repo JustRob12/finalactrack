@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Calendar, MapPin, Clock, CheckCircle, Clock3, XCircle } from 'lucide-react'
+import { Calendar, MapPin, Clock, CheckCircle, Clock3, XCircle, UserCheck } from 'lucide-react'
 
 interface Event {
   id: number
@@ -15,9 +15,30 @@ interface Event {
   end_datetime: string
 }
 
-export default function Dashboard() {
+interface UserProfile {
+  id: string
+  student_id: string
+  first_name: string
+  middle_initial?: string
+  last_name: string
+  course_id: number
+  year_level: string
+  role_id?: number
+  avatar?: string
+  course?: {
+    course_name: string
+    short: string
+  }
+}
+
+interface DashboardProps {
+  profile: UserProfile | null
+}
+
+export default function Dashboard({ profile }: DashboardProps) {
   const [events, setEvents] = useState<Event[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
+  const [attendanceMap, setAttendanceMap] = useState<Map<number, { time_in: string | null; time_out: string | null }>>(new Map())
 
   // Helper function to check if event is coming soon
   const isEventComingSoon = (eventDate: string) => {
@@ -28,6 +49,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchEvents()
+    if (profile?.id) {
+      fetchAttendanceRecords()
+    }
 
     // Set up real-time subscription for events
     const eventsSubscription = supabase
@@ -42,15 +66,38 @@ export default function Dashboard() {
         (payload) => {
           // Refetch events when any change occurs
           fetchEvents()
+          if (profile?.id) {
+            fetchAttendanceRecords()
+          }
         }
       )
       .subscribe()
 
-    // Cleanup subscription on unmount
+    // Set up real-time subscription for attendance
+    const attendanceSubscription = supabase
+      .channel('attendance_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'attendance'
+        },
+        (payload) => {
+          // Refetch attendance when any change occurs
+          if (profile?.id) {
+            fetchAttendanceRecords()
+          }
+        }
+      )
+      .subscribe()
+
+    // Cleanup subscriptions on unmount
     return () => {
       eventsSubscription.unsubscribe()
+      attendanceSubscription.unsubscribe()
     }
-  }, [])
+  }, [profile?.id])
 
   const fetchEvents = async () => {
     setEventsLoading(true)
@@ -71,6 +118,43 @@ export default function Dashboard() {
     } finally {
       setEventsLoading(false)
     }
+  }
+
+  const fetchAttendanceRecords = async () => {
+    // IMPORTANT: attendance.student_id stores the student's *student number* (profile.student_id),
+    // not the UUID. This matches what the scanner inserts from the QR payload.
+    if (!profile?.student_id) return
+
+    try {
+      // Fetch attendance records for this student
+      const { data: attendance, error } = await supabase
+        .from('attendance')
+        .select('event_id, time_in, time_out')
+        .eq('student_id', profile.student_id)
+
+      if (error) {
+        console.error('Error fetching attendance:', error)
+        return
+      }
+
+      // Create a map of event_id -> attendance record
+      const map = new Map<number, { time_in: string | null; time_out: string | null }>()
+      attendance?.forEach((record) => {
+        map.set(record.event_id, {
+          time_in: record.time_in,
+          time_out: record.time_out
+        })
+      })
+      setAttendanceMap(map)
+    } catch (error) {
+      console.error('Error fetching attendance records:', error)
+    }
+  }
+
+  const getAttendanceStatus = (eventId: number): 'present' | 'absent' => {
+    const attendance = attendanceMap.get(eventId)
+    const hasAnyScan = attendance !== undefined && (attendance.time_in !== null || attendance.time_out !== null)
+    return hasAnyScan ? 'present' : 'absent'
   }
 
   return (
@@ -126,6 +210,23 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
+
+                {/* Attendance Badge (per student) */}
+                {profile?.student_id && (
+                  <div className="absolute top-3 left-3">
+                    {getAttendanceStatus(event.id) === 'present' ? (
+                      <div className="flex items-center space-x-1 bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
+                        <UserCheck className="w-3 h-3" />
+                        <span>Present</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-1 bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs">
+                        <XCircle className="w-3 h-3" />
+                        <span>Absent</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Event Details */}
