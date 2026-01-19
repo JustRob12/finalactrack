@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null)
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Function to validate user profile exists
   const validateUserProfile = async (userId: string): Promise<boolean> => {
@@ -212,6 +213,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearInterval(refreshInterval)
         setRefreshInterval(null)
       }
+    }
+  }, [user])
+
+  // Set up inactivity timer for automatic logout after 2 minutes
+  useEffect(() => {
+    if (!user) {
+      // Clear inactivity timer if no user
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current)
+        inactivityTimerRef.current = null
+      }
+      return
+    }
+
+    // Function to reset the inactivity timer
+    const resetInactivityTimer = () => {
+      // Clear existing timer
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current)
+      }
+
+      // Set new timer for 2 minutes (120000 ms)
+      inactivityTimerRef.current = setTimeout(async () => {
+        console.log('⏰ User inactive for 2 minutes, logging out...')
+        await supabase.auth.signOut()
+      }, 2 * 60 * 1000) // 2 minutes
+    }
+
+    // Initial timer setup
+    resetInactivityTimer()
+
+    // Events that indicate user activity
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click']
+    
+    // Add event listeners for user activity
+    activityEvents.forEach(event => {
+      window.addEventListener(event, resetInactivityTimer, true)
+    })
+
+    // Cleanup function
+    return () => {
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current)
+        inactivityTimerRef.current = null
+      }
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, resetInactivityTimer, true)
+      })
     }
   }, [user])
 

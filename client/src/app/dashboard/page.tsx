@@ -35,57 +35,6 @@ export default function DashboardPage() {
     fetchUserProfile()
   }, [user, router])
 
-  const createBasicProfile = async () => {
-    if (!user?.id) return
-
-    try {
-      const basicProfile = {
-        id: user.id,
-        student_id: user.email?.split('@')[0] || 'Unknown',
-        username: user.email || '',
-        first_name: 'User',
-        last_name: 'Name',
-        course_id: 1,
-        year_level: '1st Year',
-        role_id: 1
-      }
-
-      // Creating basic profile
-
-      const { error: createError, data: createdProfile } = await supabase
-        .from('user_profiles')
-        .insert([basicProfile])
-        .select()
-
-      if (createError) {
-        console.error('Error creating basic profile:', createError)
-        // Use fallback profile
-        return {
-          id: user.id,
-          student_id: user.email?.split('@')[0] || 'Unknown',
-          first_name: 'User',
-          last_name: 'Name',
-          course_id: 1,
-          year_level: '1st Year'
-        }
-      } else {
-        // Basic profile created successfully
-        return createdProfile[0]
-      }
-    } catch (error) {
-      console.error('Exception creating basic profile:', error)
-      // Use fallback profile
-      return {
-        id: user.id,
-        student_id: user.email?.split('@')[0] || 'Unknown',
-        first_name: 'User',
-        last_name: 'Name',
-        course_id: 1,
-        year_level: '1st Year'
-      }
-    }
-  }
-
   const fetchUserProfile = async () => {
     try {
       // Fetching profile for user
@@ -101,17 +50,9 @@ export default function DashboardPage() {
 
       if (error) {
         console.error('Error fetching profile:', error)
-        // Try to create a basic profile if it doesn't exist
-        const profile = await createBasicProfile()
-        if (profile.role_id === 0) {
-          // Created profile is admin, redirecting to admin dashboard
-          router.push('/admin')
-          return
-        } else {
-          // Created profile is student, redirecting to student dashboard
-          router.push('/student')
-          return
-        }
+        // Profile doesn't exist - DO NOT CREATE - redirect to login
+        router.push('/login')
+        return
       } else if (data) {
         // Profile found
         
@@ -127,18 +68,9 @@ export default function DashboardPage() {
           return
         }
       } else {
-        // No profile found, creating one
-        // No profile found, create a basic one
-        const profile = await createBasicProfile()
-        if (profile.role_id === 0) {
-          // Created profile is admin, redirecting to admin dashboard
-          router.push('/admin')
-          return
-        } else {
-          // Created profile is student, redirecting to student dashboard
-          router.push('/student')
-          return
-        }
+        // No profile found - DO NOT CREATE - redirect to login
+        router.push('/login')
+        return
       }
     } catch (error) {
       console.error('Error fetching profile:', error)

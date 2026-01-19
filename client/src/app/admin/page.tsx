@@ -189,9 +189,12 @@ export default function AdminDashboardPage() {
     }
 
     checkSession()
-  }, [user, router, checkAndRefreshSession])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, router])
 
   useEffect(() => {
+    // Debounce tab changes to prevent multiple rapid API calls
+    const timer = setTimeout(() => {
     if (activeTab === 'event') {
       fetchEvents()
     }
@@ -207,6 +210,10 @@ export default function AdminDashboardPage() {
       fetchCourses()
       fetchFilteredStats()
     }
+    }, 100) // 100ms debounce
+
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
   
   // Subscribe to event status changes so the dropdown updates when admin toggles active/inactive

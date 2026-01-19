@@ -196,9 +196,12 @@ export default function ScannerDashboardPage() {
     }
 
     checkSession()
-  }, [user, router, checkAndRefreshSession])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, router])
 
   useEffect(() => {
+    // Debounce tab changes to prevent multiple rapid API calls
+    const timer = setTimeout(() => {
     if (activeTab === 'event') {
       fetchEvents()
     }
@@ -214,6 +217,10 @@ export default function ScannerDashboardPage() {
       fetchCourses()
       fetchFilteredStats()
     }
+    }, 100) // 100ms debounce
+
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
   
   useEffect(() => {

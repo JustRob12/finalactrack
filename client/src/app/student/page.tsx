@@ -54,69 +54,8 @@ export default function StudentLayout() {
     }
 
     checkSession()
-  }, [user, router, checkAndRefreshSession])
-
-  const createBasicProfile = async () => {
-    if (!user?.id) return
-
-    try {
-      const basicProfile = {
-        id: user.id,
-        student_id: user.email?.split('@')[0] || 'Unknown',
-        username: user.email || '',
-        first_name: 'User',
-        last_name: 'Name',
-        course_id: 1,
-        year_level: '1st Year',
-        role_id: 1
-      }
-
-      // Creating basic profile
-
-      const { error: createError, data: createdProfile } = await supabase
-        .from('user_profiles')
-        .insert([basicProfile])
-        .select(`
-          *,
-          course:courses(*)
-        `)
-
-      if (createError) {
-        console.error('Error creating basic profile:', createError)
-        // Use fallback profile
-        setProfile({
-          id: user.id,
-          student_id: user.email?.split('@')[0] || 'Unknown',
-          first_name: 'User',
-          last_name: 'Name',
-          course_id: 1,
-          year_level: '1st Year'
-        })
-      } else {
-        // Basic profile created successfully
-        
-        // Check if the created profile has admin role
-        if (createdProfile[0].role_id === 0) {
-          // Created profile is admin, redirecting to admin dashboard
-          router.push('/admin')
-          return
-        }
-        
-        setProfile(createdProfile[0])
-      }
-    } catch (error) {
-      console.error('Exception creating basic profile:', error)
-      // Use fallback profile
-      setProfile({
-        id: user.id,
-        student_id: user.email?.split('@')[0] || 'Unknown',
-        first_name: 'User',
-        last_name: 'Name',
-        course_id: 1,
-        year_level: '1st Year'
-      })
-    }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, router])
 
   const fetchUserProfile = async () => {
     try {
@@ -136,8 +75,9 @@ export default function StudentLayout() {
 
       if (error) {
         console.error('Error fetching profile:', error)
-        // Try to create a basic profile if it doesn't exist
-        await createBasicProfile()
+        // Profile doesn't exist - DO NOT CREATE - redirect to login
+        router.push('/login')
+        return
       } else if (data) {
         // Profile found
         
@@ -150,9 +90,9 @@ export default function StudentLayout() {
         
         setProfile(data)
       } else {
-        // No profile found, creating one
-        // No profile found, create a basic one
-        await createBasicProfile()
+        // No profile found - DO NOT CREATE - redirect to login
+        router.push('/login')
+        return
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
