@@ -84,7 +84,8 @@ export default function AdminRecordsPage() {
     }
 
     initializeAuth()
-  }, [user, checkAndRefreshSession, router])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, router])
 
   // Close dropdowns when clicking outside
   useEffect(() => {

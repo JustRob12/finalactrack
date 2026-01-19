@@ -196,24 +196,31 @@ export default function ScannerDashboardPage() {
     }
 
     checkSession()
-  }, [user, router, checkAndRefreshSession])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, router])
 
   useEffect(() => {
-    if (activeTab === 'event') {
-      fetchEvents()
-    }
-    if (activeTab === 'qr-scanner') {
-      // Clear selected event and refresh events when switching to scanner
-      setSelectedEvent(null)
-      fetchEvents()
-    }
-    if (activeTab === 'search') {
-      fetchEvents()
-      fetchStudentCount()
-      fetchCourseStats()
-      fetchCourses()
-      fetchFilteredStats()
-    }
+    // Debounce tab changes to prevent multiple rapid API calls
+    const timer = setTimeout(() => {
+      if (activeTab === 'event') {
+        fetchEvents()
+      }
+      if (activeTab === 'qr-scanner') {
+        // Clear selected event and refresh events when switching to scanner
+        setSelectedEvent(null)
+        fetchEvents()
+      }
+      if (activeTab === 'search') {
+        fetchEvents()
+        fetchStudentCount()
+        fetchCourseStats()
+        fetchCourses()
+        fetchFilteredStats()
+      }
+    }, 100) // 100ms debounce
+
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
   
   useEffect(() => {

@@ -71,7 +71,8 @@ export default function ScannerSearchPage() {
     }
 
     checkSession()
-  }, [user, router, checkAndRefreshSession])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, router])
 
   const handleSearch = async () => {
     if (!searchId.trim()) {

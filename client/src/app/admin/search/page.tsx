@@ -79,7 +79,8 @@ export default function SearchStudentPage() {
     }
 
     checkSession()
-  }, [user, router, checkAndRefreshSession])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, router])
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
