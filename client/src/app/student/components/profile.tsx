@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { User, Camera, Upload, X, RotateCcw, Edit, Save, CheckCircle } from 'lucide-react'
@@ -83,6 +83,18 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
     }
   }
 
+  // Reset all state when component mounts or profile changes
+  useEffect(() => {
+    // Reset edit mode state when profile changes
+    setIsEditing(false)
+    setEditingProfile(null)
+    setShowPasswordModal(false)
+    setPassword('')
+    setPasswordError('')
+    setShowEditSuccess(false)
+    setSavingProfile(false)
+  }, [profile?.id]) // Reset when profile ID changes
+
   // Fetch courses for dropdown
   useEffect(() => {
     fetchCourses()
@@ -106,19 +118,24 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   useEffect(() => {
     if (isEditing && profile) {
       setEditingProfile({ ...profile })
+    } else if (!isEditing) {
+      setEditingProfile(null)
     }
   }, [isEditing, profile])
 
-  const handleEditToggle = () => {
+  const handleEditToggle = useCallback(() => {
     if (isEditing) {
       // Cancel editing
       setIsEditing(false)
       setEditingProfile(null)
+      setShowPasswordModal(false)
+      setPassword('')
+      setPasswordError('')
     } else {
       // Start editing
       setIsEditing(true)
     }
-  }
+  }, [isEditing])
 
   const handleEditInputChange = (field: keyof UserProfile, value: string | number) => {
     if (editingProfile) {
@@ -129,49 +146,11 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
     }
   }
 
-  const handleSaveProfile = async () => {
-    if (!editingProfile || !user?.id) return
-
-    // Show password modal instead of saving directly
-    setShowPasswordModal(true)
-  }
-
-  const handlePasswordVerification = async () => {
-    if (!password.trim()) {
-      setPasswordError('Please enter your password')
+  const updateProfile = useCallback(async () => {
+    if (!editingProfile || !user?.id) {
+      console.warn('Cannot update: missing editingProfile or user')
       return
     }
-
-    setVerifyingPassword(true)
-    setPasswordError('')
-
-    try {
-      // Verify password by attempting to sign in
-      const { error } = await supabase.auth.signInWithPassword({
-        email: user?.email || '',
-        password: password
-      })
-
-      if (error) {
-        setPasswordError('Incorrect password. Please try again.')
-        setPassword('')
-      } else {
-        // Password is correct, proceed with profile update
-        await updateProfile()
-        setShowPasswordModal(false)
-        setPassword('')
-        setPasswordError('')
-      }
-    } catch (error) {
-      setPasswordError('An error occurred. Please try again.')
-      setPassword('')
-    } finally {
-      setVerifyingPassword(false)
-    }
-  }
-
-  const updateProfile = async () => {
-    if (!editingProfile || !user?.id) return
 
     setSavingProfile(true)
     try {
@@ -218,7 +197,57 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
     } finally {
       setSavingProfile(false)
     }
-  }
+  }, [editingProfile, user?.id, courses, onProfileUpdate])
+
+  const handleSaveProfile = useCallback(async () => {
+    if (!editingProfile || !user?.id) {
+      console.warn('Cannot save: missing editingProfile or user')
+      return
+    }
+
+    // Show password modal instead of saving directly
+    setShowPasswordModal(true)
+  }, [editingProfile, user?.id])
+
+  const handlePasswordVerification = useCallback(async () => {
+    if (!password.trim()) {
+      setPasswordError('Please enter your password')
+      return
+    }
+
+    if (!user?.email) {
+      setPasswordError('User email not found. Please refresh the page.')
+      return
+    }
+
+    setVerifyingPassword(true)
+    setPasswordError('')
+
+    try {
+      // Verify password by attempting to sign in
+      const { error } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: password
+      })
+
+      if (error) {
+        setPasswordError('Incorrect password. Please try again.')
+        setPassword('')
+      } else {
+        // Password is correct, proceed with profile update
+        await updateProfile()
+        setShowPasswordModal(false)
+        setPassword('')
+        setPasswordError('')
+      }
+    } catch (error) {
+      console.error('Password verification error:', error)
+      setPasswordError('An error occurred. Please try again.')
+      setPassword('')
+    } finally {
+      setVerifyingPassword(false)
+    }
+  }, [password, user?.email, updateProfile])
 
   const handleImageUpload = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
