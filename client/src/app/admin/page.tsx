@@ -217,18 +217,6 @@ export default function AdminDashboardPage() {
   }, [activeTab])
 
   // Reset form state when switching tabs to prevent stale state
-  useEffect(() => {
-    // Reset modals and form state when switching tabs
-    if (activeTab !== 'event') {
-      setShowAddEventModal(false)
-      setShowEditEventModal(false)
-      setShowDeleteModal(false)
-      setEditingEvent(null)
-      setDeletingEvent(null)
-      resetEventForm()
-    }
-  }, [activeTab, resetEventForm])
-  
   // Subscribe to event status changes so the dropdown updates when admin toggles active/inactive
   useEffect(() => {
     const channel = supabase
@@ -661,6 +649,33 @@ export default function AdminDashboardPage() {
     setEventForm({ ...eventForm, banner: '' })
   }
 
+  const resetEventForm = useCallback(() => {
+    setEventForm({
+      name: '',
+      description: '',
+      location: '',
+      banner: '',
+      status: 1,
+      start_datetime: '',
+      end_datetime: ''
+    })
+    setSelectedImage(null)
+    setImagePreview(null)
+  }, [])
+
+  // Reset form state when switching tabs to prevent stale state
+  useEffect(() => {
+    // Reset modals and form state when switching tabs
+    if (activeTab !== 'event') {
+      setShowAddEventModal(false)
+      setShowEditEventModal(false)
+      setShowDeleteModal(false)
+      setEditingEvent(null)
+      setDeletingEvent(null)
+      resetEventForm()
+    }
+  }, [activeTab, resetEventForm])
+
   const handleAddEvent = useCallback(async () => {
     if (!eventForm.name || !eventForm.location || !eventForm.start_datetime || !eventForm.end_datetime) {
       console.warn('Cannot add event: missing required fields')
@@ -813,20 +828,6 @@ export default function AdminDashboardPage() {
     setDeletingEvent(event)
     setShowDeleteModal(true)
   }
-
-  const resetEventForm = useCallback(() => {
-    setEventForm({
-      name: '',
-      description: '',
-      location: '',
-      banner: '',
-      status: 1,
-      start_datetime: '',
-      end_datetime: ''
-    })
-    setSelectedImage(null)
-    setImagePreview(null)
-  }, [])
 
   const openEditModal = (event: Event) => {
     setEditingEvent(event)
