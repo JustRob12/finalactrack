@@ -12,5 +12,5 @@
  * 3. The app will return to normal operation
  */
 
-export const MAINTENANCE_MODE = false
+export const MAINTENANCE_MODE = true
 
