@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { User, Camera, Upload, X, Crop, RotateCcw, Edit, Save, CheckCircle } from 'lucide-react'
+import { User, Camera, Upload, X, RotateCcw, Edit, Save, CheckCircle } from 'lucide-react'
 import ReactCrop, { Crop as CropType, PixelCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 
@@ -64,10 +64,24 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
     y: 10
   })
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
+  const [isCropReady, setIsCropReady] = useState(false)
   const [showCropModal, setShowCropModal] = useState(false)
   const [originalImage, setOriginalImage] = useState<string | null>(null)
   const imgRef = useRef<HTMLImageElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const withTimeout = async <T,>(promise: PromiseLike<T>, ms: number, timeoutMessage: string): Promise<T> => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), ms)
+    })
+
+    try {
+      return await Promise.race([Promise.resolve(promise), timeoutPromise])
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }
 
   // Fetch courses for dropdown
   useEffect(() => {
@@ -292,6 +306,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
         setOriginalImage(imageUrl)
         setImagePreview(imageUrl)
         setShowCropModal(true)
+        setIsCropReady(false)
         // Image preview loaded successfully
       }
       reader.onerror = (e) => {
@@ -318,14 +333,22 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
       // Starting profile picture upload
       
       // Upload to Cloudinary
-      const imageUrl = await handleImageUpload(selectedImage)
+      const imageUrl = await withTimeout(
+        handleImageUpload(selectedImage),
+        45000,
+        'Upload timed out. Please check your internet connection and try again.'
+      )
       // Image uploaded to Cloudinary
 
       // Update profile in database
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ avatar: imageUrl })
-        .eq('id', user.id)
+      const { error } = await withTimeout<{ data: unknown; error: unknown }>(
+        supabase
+          .from('user_profiles')
+          .update({ avatar: imageUrl })
+          .eq('id', user.id),
+        20000,
+        'Saving profile picture timed out. Please try again.'
+      )
 
       if (error) {
         console.error('Error updating profile:', error)
@@ -375,7 +398,34 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
       y: 10
     })
     setCompletedCrop(undefined)
+    setIsCropReady(false)
     setOriginalImage(null)
+  }
+
+  const getPixelCropFromCrop = (image: HTMLImageElement, c: CropType): PixelCrop => {
+    // ReactCrop gives us percent crops by default in this component; we need pixel values for canvas.
+    if (c.unit === '%') {
+      const x = (c.x / 100) * image.width
+      const y = (c.y / 100) * image.height
+      const width = (c.width / 100) * image.width
+      const height = (c.height / 100) * image.height
+      return {
+        unit: 'px',
+        x: Math.round(x),
+        y: Math.round(y),
+        width: Math.round(width),
+        height: Math.round(height),
+      }
+    }
+
+    // unit is 'px'
+    return {
+      unit: 'px',
+      x: Math.round(c.x),
+      y: Math.round(c.y),
+      width: Math.round(c.width),
+      height: Math.round(c.height),
+    }
   }
 
   const getCroppedImg = (image: HTMLImageElement, crop: PixelCrop): Promise<Blob> => {
@@ -418,10 +468,11 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   }
 
   const handleCropSave = async () => {
-    if (!imgRef.current || !completedCrop) return
+    if (!imgRef.current) return
+    const effectiveCrop = completedCrop ?? getPixelCropFromCrop(imgRef.current, crop)
 
     try {
-      const croppedBlob = await getCroppedImg(imgRef.current, completedCrop)
+      const croppedBlob = await getCroppedImg(imgRef.current, effectiveCrop)
       const croppedFile = new File([croppedBlob], 'cropped-profile.jpg', { type: 'image/jpeg' })
       
       setSelectedImage(croppedFile)
@@ -431,6 +482,13 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
       console.error('Error cropping image:', error)
       alert('Error cropping image. Please try again.')
     }
+  }
+
+  // Allow user to skip cropping and use the original image
+  const handleUseOriginalImage = () => {
+    if (!originalImage || !selectedImage) return
+    setImagePreview(originalImage)
+    setShowCropModal(false)
   }
 
   const handleCropCancel = () => {
@@ -444,6 +502,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
       y: 10
     })
     setCompletedCrop(undefined)
+    setIsCropReady(false)
   }
 
   return (
@@ -772,8 +831,15 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
                   <RotateCcw className="w-5 h-5" />
                 </button>
                 <button
+                  onClick={handleUseOriginalImage}
+                  className="px-3 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm font-semibold"
+                  title="Use original image (no crop)"
+                >
+                  Use Original
+                </button>
+                <button
                   onClick={handleCropSave}
-                  disabled={!completedCrop}
+                  disabled={!isCropReady}
                   className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Apply crop"
                 >
@@ -814,6 +880,12 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
                       alt="Crop preview"
                       className="max-w-full h-auto"
                       style={{ maxHeight: '50vh' }}
+                      onLoad={(e) => {
+                        const img = e.currentTarget
+                        const pixelCrop = getPixelCropFromCrop(img, crop)
+                        setCompletedCrop(pixelCrop)
+                        setIsCropReady(true)
+                      }}
                     />
                   </ReactCrop>
                 </div>
