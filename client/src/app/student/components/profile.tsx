@@ -67,6 +67,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   const [showCropModal, setShowCropModal] = useState(false)
   const [originalImage, setOriginalImage] = useState<string | null>(null)
   const imgRef = useRef<HTMLImageElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Fetch courses for dropdown
   useEffect(() => {
@@ -260,7 +261,10 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   }
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+    const input = event.target
+    const file = input.files?.[0]
+    // Reset the input so picking the same file again still triggers onChange
+    input.value = ''
     if (file) {
       // File selected for upload
       
@@ -360,6 +364,9 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   const resetImageStates = () => {
     setSelectedImage(null)
     setImagePreview(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
     setCrop({
       unit: '%',
       width: 80,
@@ -669,6 +676,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
                       type="file"
                       accept="image/*"
                       onChange={handleImageSelect}
+                      ref={fileInputRef}
                       className="hidden"
                       id="profile-image-upload"
                     />
