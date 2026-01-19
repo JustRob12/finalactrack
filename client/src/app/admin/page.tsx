@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
@@ -215,6 +215,19 @@ export default function AdminDashboardPage() {
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
+
+  // Reset form state when switching tabs to prevent stale state
+  useEffect(() => {
+    // Reset modals and form state when switching tabs
+    if (activeTab !== 'event') {
+      setShowAddEventModal(false)
+      setShowEditEventModal(false)
+      setShowDeleteModal(false)
+      setEditingEvent(null)
+      setDeletingEvent(null)
+      resetEventForm()
+    }
+  }, [activeTab, resetEventForm])
   
   // Subscribe to event status changes so the dropdown updates when admin toggles active/inactive
   useEffect(() => {
@@ -648,7 +661,12 @@ export default function AdminDashboardPage() {
     setEventForm({ ...eventForm, banner: '' })
   }
 
-  const handleAddEvent = async () => {
+  const handleAddEvent = useCallback(async () => {
+    if (!eventForm.name || !eventForm.location || !eventForm.start_datetime || !eventForm.end_datetime) {
+      console.warn('Cannot add event: missing required fields')
+      return
+    }
+
     setAddEventLoading(true)
     try {
       let bannerUrl = eventForm.banner
@@ -696,10 +714,18 @@ export default function AdminDashboardPage() {
     } finally {
       setAddEventLoading(false)
     }
-  }
+  }, [eventForm, selectedImage, resetEventForm])
 
-  const handleEditEvent = async () => {
-    if (!editingEvent) return
+  const handleEditEvent = useCallback(async () => {
+    if (!editingEvent) {
+      console.warn('Cannot edit event: no event selected')
+      return
+    }
+    
+    if (!eventForm.name || !eventForm.location || !eventForm.start_datetime || !eventForm.end_datetime) {
+      console.warn('Cannot edit event: missing required fields')
+      return
+    }
     
     setAddEventLoading(true)
     try {
@@ -750,9 +776,14 @@ export default function AdminDashboardPage() {
     } finally {
       setAddEventLoading(false)
     }
-  }
+  }, [editingEvent, eventForm, selectedImage, resetEventForm])
 
-  const handleDeleteEvent = async (eventId: number) => {
+  const handleDeleteEvent = useCallback(async (eventId: number) => {
+    if (!eventId) {
+      console.warn('Cannot delete event: no event ID provided')
+      return
+    }
+
     setDeleteEventLoading(eventId)
     try {
       const { error } = await supabase
@@ -776,14 +807,14 @@ export default function AdminDashboardPage() {
       setShowDeleteModal(false)
       setDeletingEvent(null)
     }
-  }
+  }, [])
 
   const openDeleteModal = (event: Event) => {
     setDeletingEvent(event)
     setShowDeleteModal(true)
   }
 
-  const resetEventForm = () => {
+  const resetEventForm = useCallback(() => {
     setEventForm({
       name: '',
       description: '',
@@ -795,7 +826,7 @@ export default function AdminDashboardPage() {
     })
     setSelectedImage(null)
     setImagePreview(null)
-  }
+  }, [])
 
   const openEditModal = (event: Event) => {
     setEditingEvent(event)
