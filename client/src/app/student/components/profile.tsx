@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useId } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { User, Camera, Upload, X, RotateCcw, Edit, Save, CheckCircle } from 'lucide-react'
@@ -36,11 +36,14 @@ interface ProfileProps {
 
 export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   const { user } = useAuth()
+  const uploadInputId = useId()
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [displayAvatarUrl, setDisplayAvatarUrl] = useState<string | null>(profile?.avatar ?? null)
+  const previewObjectUrlRef = useRef<string | null>(null)
   
   // Edit mode states
   const [isEditing, setIsEditing] = useState(false)
@@ -94,6 +97,11 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
     setShowEditSuccess(false)
     setSavingProfile(false)
   }, [profile?.id]) // Reset when profile ID changes
+
+  // Keep displayed avatar in sync with profile prop, but allow local immediate updates after upload.
+  useEffect(() => {
+    setDisplayAvatarUrl(profile?.avatar ?? null)
+  }, [profile?.avatar, profile?.id])
 
   // Fetch courses for dropdown
   useEffect(() => {
@@ -393,11 +401,14 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
           return
         }
         
-        // Update the profile state instead of reloading the page
+        // Force UI to show the new avatar immediately (cache-bust the displayed URL).
+        // Keep the DB value clean (no cache-buster) by passing the original imageUrl to onProfileUpdate.
+        const cacheBusted = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}v=${Date.now()}`
+        setDisplayAvatarUrl(cacheBusted)
+
         if (profile && onProfileUpdate) {
           const updatedProfile = { ...profile, avatar: imageUrl }
           onProfileUpdate(updatedProfile)
-          // Profile state updated locally
         }
                  // Close the modal and reset states
          setShowProfileModal(false)
@@ -416,6 +427,10 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   const resetImageStates = () => {
     setSelectedImage(null)
     setImagePreview(null)
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current)
+      previewObjectUrlRef.current = null
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -505,7 +520,10 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
       const croppedFile = new File([croppedBlob], 'cropped-profile.jpg', { type: 'image/jpeg' })
       
       setSelectedImage(croppedFile)
-      setImagePreview(URL.createObjectURL(croppedBlob))
+      if (previewObjectUrlRef.current) URL.revokeObjectURL(previewObjectUrlRef.current)
+      const objUrl = URL.createObjectURL(croppedBlob)
+      previewObjectUrlRef.current = objUrl
+      setImagePreview(objUrl)
       setShowCropModal(false)
     } catch (error) {
       console.error('Error cropping image:', error)
@@ -563,9 +581,9 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
             <div className="flex flex-col items-center sm:items-start">
               <div className="relative">
                 <div className="w-32 h-32 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-gray-100 shadow-lg border-4 border-white">
-                  {profile?.avatar ? (
+                  {displayAvatarUrl ? (
                     <img 
-                      src={profile.avatar} 
+                      src={displayAvatarUrl} 
                       alt="Profile" 
                       className="w-full h-full object-cover"
                     />
@@ -765,12 +783,13 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
                       accept="image/*"
                       onChange={handleImageSelect}
                       ref={fileInputRef}
-                      className="hidden"
-                      id="profile-image-upload"
+                      // Avoid `display:none` on mobile Safari (can make label-click unreliable)
+                      className="sr-only"
+                      id={uploadInputId}
                     />
                     <label
-                      htmlFor="profile-image-upload"
-                      className="cursor-pointer flex flex-col items-center space-y-4"
+                      htmlFor={uploadInputId}
+                      className="cursor-pointer flex flex-col items-center space-y-4 select-none"
                     >
                       <Upload className="w-12 h-12 text-gray-400" />
                       <div>
