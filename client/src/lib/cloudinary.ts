@@ -1,13 +1,25 @@
-import { v2 as cloudinary } from 'cloudinary'
+// Function to upload image from URL to Cloudinary (for Google profile pictures)
+export const uploadImageFromUrlToCloudinary = async (imageUrl: string): Promise<string> => {
+  try {
+    // Fetch the image from the URL
+    const response = await fetch(imageUrl)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status}`)
+    }
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET, // This should be server-side only
-})
+    // Convert to blob
+    const blob = await response.blob()
 
-export default cloudinary
+    // Create a File object from the blob
+    const file = new File([blob], 'google-profile.jpg', { type: 'image/jpeg' })
+
+    // Upload to Cloudinary
+    return await uploadImageToCloudinary(file)
+  } catch (error) {
+    console.error('Error uploading image from URL:', error)
+    throw error
+  }
+}
 
 // Function to upload image to Cloudinary
 export const uploadImageToCloudinary = async (file: File): Promise<string> => {
@@ -16,6 +28,10 @@ export const uploadImageToCloudinary = async (file: File): Promise<string> => {
     formData.append('file', file)
     formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'ml_default')
     formData.append('cloud_name', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || '')
+
+    // Add quality preservation parameters
+    formData.append('quality', 'auto')
+    formData.append('format', 'auto')
 
     fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, {
       method: 'POST',

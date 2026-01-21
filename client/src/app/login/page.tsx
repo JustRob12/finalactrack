@@ -4,7 +4,8 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase } from '@/lib/supabase'
+import { supabase, extractGoogleAvatar } from '@/lib/supabase'
+import { uploadImageFromUrlToCloudinary } from '@/lib/cloudinary'
 import { ArrowLeft, X, AlertCircle } from 'lucide-react'
 import Image from 'next/image'
 
@@ -73,7 +74,7 @@ function LoginPageContent() {
             // Check if user profile exists by ID first (most reliable), then by email
             const { data: profile, error: profileError } = await supabase
               .from('user_profiles')
-              .select('role_id, username, id')
+              .select('role_id, username, id, avatar')
               .eq('id', userToCheck.id)
               .maybeSingle()
 
@@ -90,7 +91,47 @@ function LoginPageContent() {
             if (profile) {
               // User profile exists, proceed with login
               console.log('✅ User profile found, role_id:', profile.role_id)
-              
+
+              // Check if user has NO avatar (strictly null) but Google provides one - update it automatically
+              // Only update if avatar is strictly null, not if it's an empty string or custom uploaded image
+              const googleAvatar = extractGoogleAvatar(userToCheck)
+              console.log('🔍 Avatar check - profile.avatar:', profile.avatar, 'typeof:', typeof profile.avatar, 'googleAvatar:', !!googleAvatar)
+              if (profile.avatar === null && googleAvatar) {
+                console.log('📸 User has no avatar (null), uploading Google profile picture to Cloudinary')
+                try {
+                  // Upload Google profile image to Cloudinary to avoid rate limiting
+                  const cloudinaryUrl = await uploadImageFromUrlToCloudinary(googleAvatar)
+                  console.log('✅ Google profile picture uploaded to Cloudinary:', cloudinaryUrl)
+
+                  // Update profile with Cloudinary URL
+                  const { error: updateError } = await supabase
+                    .from('user_profiles')
+                    .update({ avatar: cloudinaryUrl })
+                    .eq('id', profile.id)
+
+                  if (updateError) {
+                    console.error('❌ Error updating avatar:', updateError)
+                  } else {
+                    console.log('✅ Avatar updated with Cloudinary URL')
+                  }
+                } catch (updateError) {
+                  console.error('❌ Exception uploading/uploading avatar:', updateError)
+                  // If upload fails, still try to store the Google URL as fallback
+                  try {
+                    const { error: fallbackError } = await supabase
+                      .from('user_profiles')
+                      .update({ avatar: googleAvatar })
+                      .eq('id', profile.id)
+
+                    if (!fallbackError) {
+                      console.log('✅ Avatar updated with Google URL as fallback')
+                    }
+                  } catch (fallbackError) {
+                    console.error('❌ Fallback avatar update also failed:', fallbackError)
+                  }
+                }
+              }
+
               // Clear URL hash/query params before redirecting
               if (typeof window !== 'undefined') {
                 window.history.replaceState({}, document.title, '/login')

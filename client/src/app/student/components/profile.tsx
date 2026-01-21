@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useId } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase } from '@/lib/supabase'
+import { supabase, extractGoogleAvatar } from '@/lib/supabase'
 import { User, Camera, Upload, X, RotateCcw, Edit, Save, CheckCircle } from 'lucide-react'
 import ReactCrop, { Crop as CropType, PixelCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
@@ -42,7 +42,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [displayAvatarUrl, setDisplayAvatarUrl] = useState<string | null>(profile?.avatar ?? null)
+  const [displayAvatarUrl, setDisplayAvatarUrl] = useState<string | null>(profile?.avatar || extractGoogleAvatar(user) ?? null)
   const previewObjectUrlRef = useRef<string | null>(null)
   
   // Edit mode states
@@ -100,8 +100,10 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
 
   // Keep displayed avatar in sync with profile prop, but allow local immediate updates after upload.
   useEffect(() => {
-    setDisplayAvatarUrl(profile?.avatar ?? null)
-  }, [profile?.avatar, profile?.id])
+    // Use profile avatar if available, otherwise fallback to Google profile picture
+    const avatarUrl = profile?.avatar || extractGoogleAvatar(user)
+    setDisplayAvatarUrl(avatarUrl ?? null)
+  }, [profile?.avatar, profile?.id, user])
 
   // Fetch courses for dropdown
   useEffect(() => {
@@ -582,10 +584,11 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
               <div className="relative">
                 <div className="w-32 h-32 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-gray-100 shadow-lg border-4 border-white">
                   {displayAvatarUrl ? (
-                    <img 
-                      src={displayAvatarUrl} 
-                      alt="Profile" 
+                    <img
+                      src={displayAvatarUrl}
+                      alt="Profile"
                       className="w-full h-full object-cover"
+                      onError={() => setDisplayAvatarUrl(null)}
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
