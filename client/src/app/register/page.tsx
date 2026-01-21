@@ -338,7 +338,6 @@ function RegisterPageContent() {
         year_level: userData.year_level,
         role_id: userData.role_id,
         avatar: userData.avatar,
-        role_id: userData.role_id,
       })
 
       const { data: insertedData, error: profileError } = await supabase

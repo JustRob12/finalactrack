@@ -42,7 +42,7 @@ export default function Profile({ profile, onProfileUpdate }: ProfileProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [displayAvatarUrl, setDisplayAvatarUrl] = useState<string | null>(profile?.avatar || extractGoogleAvatar(user) ?? null)
+  const [displayAvatarUrl, setDisplayAvatarUrl] = useState<string | null>((profile?.avatar || extractGoogleAvatar(user)) ?? null)
   const previewObjectUrlRef = useRef<string | null>(null)
   
   // Edit mode states
