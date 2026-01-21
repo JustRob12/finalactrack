@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/config/supabase'
 
 interface AuthContextType {
   user: User | null
@@ -52,15 +52,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (session) {
-          // Check if we're on auth-related pages
+          // Check if we're on auth-related or setup pages
           const isAuthPage = typeof window !== 'undefined' && 
             (window.location.pathname === '/login' || 
              window.location.pathname === '/register' || 
              window.location.pathname.startsWith('/register'))
           
-          if (isAuthPage) {
-            // On auth pages, allow user without profile temporarily
-            console.log('📝 Auth page detected, allowing user without profile temporarily')
+          const isSetupPage = typeof window !== 'undefined' && window.location.pathname === '/setup-profile'
+          
+          if (isAuthPage || isSetupPage) {
+            // On auth/setup pages, allow user without profile temporarily
+            console.log('📝 Auth/setup page detected, allowing user without profile temporarily')
             setUser(session.user)
           } else {
             // Validate profile exists
@@ -69,9 +71,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (hasProfile) {
               setUser(session.user)
             } else {
-              console.log('⚠️ User profile not found, signing out user')
-              await supabase.auth.signOut()
-              setUser(null)
+              console.log('⚠️ User profile not found, redirecting to setup profile')
+              setUser(session.user) // Keep user signed in
+              if (typeof window !== 'undefined') {
+                window.location.href = '/setup-profile'
+              }
             }
           }
         } else {
@@ -99,12 +103,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
              window.location.pathname === '/register' || 
              window.location.pathname.startsWith('/register'))
           
-          if (!isAuthPage) {
+          const isSetupPage = typeof window !== 'undefined' && window.location.pathname === '/setup-profile'
+          
+          if (!isAuthPage && !isSetupPage) {
             const hasProfile = await validateUserProfile(session.user.id)
             if (!hasProfile) {
-              console.log('⚠️ Profile validation failed during auth state change')
-              await supabase.auth.signOut()
-              setUser(null)
+              console.log('⚠️ Profile validation failed, redirecting to setup profile')
+              setUser(session.user) // Keep user signed in
+              if (typeof window !== 'undefined') {
+                window.location.href = '/setup-profile'
+              }
               return
             }
           }

@@ -35,6 +35,45 @@ export async function GET(request: Request) {
       
       console.log('✅ Code exchange successful, user:', data.user?.email)
       
+      // Check if user profile exists, create if not
+      if (data.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle()
+        
+        if (!profile && !profileError) {
+          console.log('📝 Creating user profile for OAuth user...')
+          
+          // Extract name from user metadata
+          const fullName = data.user.user_metadata?.full_name || 
+                          data.user.user_metadata?.name || 
+                          data.user.email?.split('@')[0] || 
+                          'User'
+          
+          const { error: insertError } = await supabase
+            .from('user_profiles')
+            .insert({
+              id: data.user.id,
+              first_name: fullName.split(' ')[0] || fullName,
+              last_name: fullName.split(' ').slice(1).join(' ') || '',
+              email: data.user.email,
+              role_id: 1, // Student role
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+          
+          if (insertError) {
+            console.error('❌ Error creating user profile:', insertError)
+          } else {
+            console.log('✅ User profile created successfully')
+          }
+        } else if (profile) {
+          console.log('✅ User profile already exists')
+        }
+      }
+      
       const forwardedHost = request.headers.get('x-forwarded-host')
       const isLocalEnv = process.env.NODE_ENV === 'development'
       
