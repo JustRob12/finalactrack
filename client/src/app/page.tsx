@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { GraduationCap, Mail, Phone, MapPin, Clock, Users, Shield, BarChart3, Search, CheckCircle, XCircle, Facebook } from 'lucide-react'
 import Image from 'next/image'
+import Script from 'next/script'
+
 
 interface AttendanceRecord {
   event_id: number
@@ -151,7 +153,7 @@ export default function HomePage() {
       })
       setStudentAttendance(attendanceRecords)
       setShowStudentSearch(true)
-      
+
       // Play audio depending on attendance result
       if (attendanceRecords.length === 0) {
         playNoAttendanceAudio()
@@ -159,8 +161,8 @@ export default function HomePage() {
         try {
           const successAudio = new Audio('/audio/paldo.mp3')
           successAudio.volume = 1
-          successAudio.play().catch(() => {})
-        } catch {}
+          successAudio.play().catch(() => { })
+        } catch { }
       }
     } catch (error) {
       console.error('Error searching for student:', error)
@@ -255,6 +257,13 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white">
+      <Script
+        async
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1334071359969484"
+        crossOrigin="anonymous"
+        strategy="afterInteractive"
+      />
+
       {/* Navigation Header */}
       <nav className="bg-white shadow-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -306,10 +315,10 @@ export default function HomePage() {
             <span> System</span>
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Streamline attendance management with our advanced QR code-based system. 
+            Streamline attendance management with our advanced QR code-based system.
             Track student attendance efficiently and accurately.
           </p>
-          
+
           {/* Student Search and Calendar Section */}
           <div className="bg-white rounded-lg shadow-lg p-6 mb-8 max-w-7xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -319,7 +328,7 @@ export default function HomePage() {
                 <p className="text-sm text-gray-600 mb-6 text-center">
                   <strong>Note:</strong> This search is only available for registered students who use QR code for attendance tracking.
                 </p>
-                
+
                 <div className="flex space-x-3 mb-4">
                   <div className="flex-1">
                     <input
@@ -375,18 +384,18 @@ export default function HomePage() {
                           <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
                             <div className="flex items-center space-x-1">
                               <span className="font-medium">Time In:</span>
-                              <span>{record.time_in ? new Date(record.time_in).toLocaleTimeString('en-US', { 
-                                hour: '2-digit', 
+                              <span>{record.time_in ? new Date(record.time_in).toLocaleTimeString('en-US', {
+                                hour: '2-digit',
                                 minute: '2-digit',
-                                hour12: true 
+                                hour12: true
                               }) : 'Not recorded'}</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <span className="font-medium">Time Out:</span>
-                              <span>{record.time_out ? new Date(record.time_out).toLocaleTimeString('en-US', { 
-                                hour: '2-digit', 
+                              <span>{record.time_out ? new Date(record.time_out).toLocaleTimeString('en-US', {
+                                hour: '2-digit',
                                 minute: '2-digit',
-                                hour12: true 
+                                hour12: true
                               }) : 'Not recorded'}</span>
                             </div>
                           </div>
@@ -403,34 +412,34 @@ export default function HomePage() {
                 )}
               </div>
 
-                             {/* Right Column - Calendar */}
-               <div>
-                 <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Calendar of Events</h3>
-                                   <p className="text-sm text-gray-600 mb-6 text-center">
-                    View all events and their scheduled dates. Event days are highlighted in orange.
-                  </p>
-                 
-                 {eventsLoading && (
-                   <div className="text-center py-4">
-                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-2"></div>
-                     <p className="text-sm text-gray-600">Loading events...</p>
-                   </div>
-                 )}
-                 
-                 {!eventsLoading && events.length === 0 && (
-                   <div className="text-center py-4">
-                     <p className="text-sm text-gray-600">No events found for this month.</p>
-                   </div>
-                 )}
-                 
-                 {!eventsLoading && events.length > 0 && (
-                   <div className="text-center mb-4">
-                     <p className="text-sm text-gray-600">
-                       {events.length} event{events.length !== 1 ? 's' : ''} found
-                     </p>
-                   </div>
-                 )}
-                
+              {/* Right Column - Calendar */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Calendar of Events</h3>
+                <p className="text-sm text-gray-600 mb-6 text-center">
+                  View all events and their scheduled dates. Event days are highlighted in orange.
+                </p>
+
+                {eventsLoading && (
+                  <div className="text-center py-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-2"></div>
+                    <p className="text-sm text-gray-600">Loading events...</p>
+                  </div>
+                )}
+
+                {!eventsLoading && events.length === 0 && (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-600">No events found for this month.</p>
+                  </div>
+                )}
+
+                {!eventsLoading && events.length > 0 && (
+                  <div className="text-center mb-4">
+                    <p className="text-sm text-gray-600">
+                      {events.length} event{events.length !== 1 ? 's' : ''} found
+                    </p>
+                  </div>
+                )}
+
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-4">
                     <button
@@ -467,31 +476,30 @@ export default function HomePage() {
                     {Array.from({ length: getFirstDayOfMonth(currentDate) }, (_, i) => (
                       <div key={`empty-${i}`} className="h-10"></div>
                     ))}
-                    
+
                     {Array.from({ length: getDaysInMonth(currentDate) }, (_, i) => {
                       const day = i + 1
                       const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
                       const hasEvent = hasEventOnDate(date)
                       const event = hasEvent ? getEventOnDate(date) : null
-                      
+
                       // Check if this is today's date
                       const today = new Date()
-                      const isToday = date.getDate() === today.getDate() && 
-                                    date.getMonth() === today.getMonth() && 
-                                    date.getFullYear() === today.getFullYear()
-                      
+                      const isToday = date.getDate() === today.getDate() &&
+                        date.getMonth() === today.getMonth() &&
+                        date.getFullYear() === today.getFullYear()
+
                       return (
                         <div
                           key={day}
-                          className={`h-10 flex items-center justify-center text-sm rounded-lg cursor-pointer transition-colors relative ${
-                            hasEvent 
-                              ? isToday
-                                ? 'bg-orange-600 text-white hover:bg-orange-700 border-2 border-orange-300'
-                                : 'bg-orange-500 text-white hover:bg-orange-600'
-                              : isToday
-                                ? 'bg-orange-100 text-orange-800 hover:bg-orange-200 border-2 border-orange-300'
-                                : 'hover:bg-gray-200'
-                          }`}
+                          className={`h-10 flex items-center justify-center text-sm rounded-lg cursor-pointer transition-colors relative ${hasEvent
+                            ? isToday
+                              ? 'bg-orange-600 text-white hover:bg-orange-700 border-2 border-orange-300'
+                              : 'bg-orange-500 text-white hover:bg-orange-600'
+                            : isToday
+                              ? 'bg-orange-100 text-orange-800 hover:bg-orange-200 border-2 border-orange-300'
+                              : 'hover:bg-gray-200'
+                            }`}
                           title={event ? `Click to view ${event.name}` : isToday ? 'Today' : ''}
                           onClick={() => {
                             if (event) {
@@ -570,8 +578,8 @@ export default function HomePage() {
                 Association of Computer Engineering Students
               </h3>
               <p className="text-lg text-gray-600 mb-6">
-                ACES is a premier student organization within the Faculty of Computing Engineering and Technology (FaCET), 
-                dedicated to fostering excellence in computer, solving problems and engineering education. We provide opportunities for students 
+                ACES is a premier student organization within the Faculty of Computing Engineering and Technology (FaCET),
+                dedicated to fostering excellence in computer, solving problems and engineering education. We provide opportunities for students
                 to develop technical skills, leadership abilities, and professional networks within the computing and technology field.
               </p>
               <div className="grid grid-cols-2 gap-4">
@@ -637,9 +645,9 @@ export default function HomePage() {
           </div>
           <div className="mt-12 text-center">
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Our attendance system is designed to streamline the process of tracking student attendance 
-              while providing valuable insights for educational institutions. With features like real-time 
-              monitoring, detailed reporting, and user-friendly interfaces, ACETRACK makes attendance 
+              Our attendance system is designed to streamline the process of tracking student attendance
+              while providing valuable insights for educational institutions. With features like real-time
+              monitoring, detailed reporting, and user-friendly interfaces, ACETRACK makes attendance
               management efficient and effective.
             </p>
           </div>
@@ -658,52 +666,52 @@ export default function HomePage() {
           <div className="max-w-2xl mx-auto text-center">
             <h3 className="text-2xl font-bold text-gray-900 mb-6">Get in Touch</h3>
             <p className="text-lg text-gray-600 mb-12">
-              Have questions about our attendance system or need support? 
+              Have questions about our attendance system or need support?
               We're here to help you get the most out of ACETRACK.
             </p>
-                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-               <div className="flex flex-col items-center space-y-3">
-                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
-                   <Mail className="w-8 h-8 text-orange-500" />
-                 </div>
-                 <div className="text-center">
-                   <h4 className="font-semibold text-gray-900 text-lg">Email</h4>
-                   <p className="text-gray-600">acetrack2025@gmail.com</p>
-                 </div>
-               </div>
-               <div className="flex flex-col items-center space-y-3">
-                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
-                   <Phone className="w-8 h-8 text-orange-500" />
-                 </div>
-                 <div className="text-center">
-                   <h4 className="font-semibold text-gray-900 text-lg">Phone</h4>
-                   <p className="text-gray-600">09363288483 - PIO</p>
-                 </div>
-               </div>
-               <div className="flex flex-col items-center space-y-3">
-                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
-                   <MapPin className="w-8 h-8 text-orange-500" />
-                 </div>
-                 <div className="text-center">
-                   <h4 className="font-semibold text-gray-900 text-lg">Address</h4>
-                   <p className="text-gray-600">Engineering Extension Building<br />DOrSU Main Campus</p>
-                 </div>
-               </div>
-               <div className="flex flex-col items-center space-y-3">
-                 <a 
-                   href="https://www.facebook.com/dorsu.aces" 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center hover:bg-orange-200 transition-colors cursor-pointer"
-                 >
-                   <Facebook className="w-8 h-8 text-orange-500" />
-                 </a>
-                 <div className="text-center">
-                   <h4 className="font-semibold text-gray-900 text-lg">Facebook</h4>
-                   <p className="text-gray-600">Follow us on Facebook</p>
-                 </div>
-               </div>
-             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div className="flex flex-col items-center space-y-3">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
+                  <Mail className="w-8 h-8 text-orange-500" />
+                </div>
+                <div className="text-center">
+                  <h4 className="font-semibold text-gray-900 text-lg">Email</h4>
+                  <p className="text-gray-600">acetrack2025@gmail.com</p>
+                </div>
+              </div>
+              <div className="flex flex-col items-center space-y-3">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
+                  <Phone className="w-8 h-8 text-orange-500" />
+                </div>
+                <div className="text-center">
+                  <h4 className="font-semibold text-gray-900 text-lg">Phone</h4>
+                  <p className="text-gray-600">09363288483 - PIO</p>
+                </div>
+              </div>
+              <div className="flex flex-col items-center space-y-3">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
+                  <MapPin className="w-8 h-8 text-orange-500" />
+                </div>
+                <div className="text-center">
+                  <h4 className="font-semibold text-gray-900 text-lg">Address</h4>
+                  <p className="text-gray-600">Engineering Extension Building<br />DOrSU Main Campus</p>
+                </div>
+              </div>
+              <div className="flex flex-col items-center space-y-3">
+                <a
+                  href="https://www.facebook.com/dorsu.aces"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center hover:bg-orange-200 transition-colors cursor-pointer"
+                >
+                  <Facebook className="w-8 h-8 text-orange-500" />
+                </a>
+                <div className="text-center">
+                  <h4 className="font-semibold text-gray-900 text-lg">Facebook</h4>
+                  <p className="text-gray-600">Follow us on Facebook</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -747,9 +755,9 @@ export default function HomePage() {
               <div className="flex space-x-4">
                 <a href="https://www.facebook.com/dorsu.aces" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
                   <span className="sr-only">Facebook</span>
-                    
+
                   <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                   </svg>
                 </a>
                 {/* <a href="#" className="text-gray-400 hover:text-white transition-colors">
