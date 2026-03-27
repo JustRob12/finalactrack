@@ -1,0 +1,27 @@
+{
+  "name": "finalactrack-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --stream run dev",
+    "dev:acetrack": "pnpm --filter acetrack dev",
+    "dev:admin": "pnpm --filter admin dev",
+    "dev:client": "pnpm --filter client dev",
+    "build": "pnpm --recursive run build",
+    "build:acetrack": "pnpm --filter acetrack build",
+    "build:admin": "pnpm --filter admin build",
+    "build:client": "pnpm --filter client build",
+    "start": "pnpm --parallel --stream run start",
+    "start:acetrack": "pnpm --filter acetrack start",
+    "start:admin": "pnpm --filter admin start",
+    "start:client": "pnpm --filter client start",
+    "lint": "pnpm --recursive run lint",
+    "clean": "pnpm --recursive exec rm -rf node_modules .next",
+    "install:all": "pnpm install"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
